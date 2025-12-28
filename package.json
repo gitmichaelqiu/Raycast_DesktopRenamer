@@ -33,7 +33,15 @@
       "name": "rename-current-space",
       "title": "Rename Current Space",
       "description": "Rename the current space.",
-      "mode": "no-view"
+      "mode": "no-view",
+      "arguments": [
+        {
+          "name": "newName",
+          "placeholder": "New Name",
+          "type": "text",
+          "required": true
+        }
+      ]
     },
     {
       "name": "toggle-active-label-window",
