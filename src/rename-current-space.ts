@@ -14,8 +14,7 @@ export default async function Command(props: LaunchProps<{ arguments: RenameArgu
     await runAppleScript(`tell application "DesktopRenamer" to rename current space "${sanitizedName}"`);
 
     await showHUD(`Renamed space to "${newName}"`);
-  } catch (error) {
-    console.error(error);
+  } catch {
     await showHUD("Failed to rename space. Is DesktopRenamer running?");
   }
 }

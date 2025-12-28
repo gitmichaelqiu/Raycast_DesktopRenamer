@@ -5,7 +5,7 @@ export default async function Command() {
   try {
     await runAppleScript(`tell application "DesktopRenamer" to toggle active label`);
     await showHUD("Toggled Active Label Window");
-  } catch (error) {
+  } catch {
     await showHUD("Failed to toggle active label.");
   }
 }

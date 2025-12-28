@@ -5,7 +5,7 @@ export default async function Command() {
   try {
     await runAppleScript(`tell application "DesktopRenamer" to toggle labels`);
     await showHUD("Toggled Space Label Windows");
-  } catch (error) {
+  } catch {
     await showHUD("Failed to toggle labels.");
   }
 }
