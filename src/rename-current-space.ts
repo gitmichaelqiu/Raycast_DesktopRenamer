@@ -12,10 +12,10 @@ export default async function Command(props: LaunchProps<{ arguments: RenameArgu
   try {
     // Escape quotes to prevent AppleScript errors if the name contains quotes
     const sanitizedName = newName.replace(/"/g, '\\"');
-    
+
     // Command syntax: rename current space "Name"
     await runAppleScript(`tell application "DesktopRenamer" to rename current space "${sanitizedName}"`);
-    
+
     await showHUD(`Renamed space to "${newName}"`);
   } catch (error) {
     console.error(error);
