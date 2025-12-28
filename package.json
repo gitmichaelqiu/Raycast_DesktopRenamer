@@ -48,8 +48,8 @@
       "mode": "no-view"
     },
     {
-      "name": "toggle-visibility-of-active-label-window",
-      "title": "Toggle Visibility of Active Label Window",
+      "name": "toggle-active-label-window-visibility",
+      "title": "Toggle Active Label Window Visibility",
       "description": "Show/hide the Active Label Window from the desktop.",
       "mode": "no-view"
     }
