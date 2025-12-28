@@ -6,8 +6,7 @@
   "icon": "icon.png",
   "author": "michael_qiu",
   "platforms": [
-    "macOS",
-    "Windows"
+    "macOS"
   ],
   "categories": [
     "Applications",
