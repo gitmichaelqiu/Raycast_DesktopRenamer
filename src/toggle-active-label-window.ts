@@ -3,9 +3,10 @@ import { runAppleScript } from "@raycast/utils";
 
 export default async function Command() {
   try {
-    await runAppleScript(`tell application "DesktopRenamer" to toggle active label`);
-    await showHUD("Toggled Active Label Window");
+    const result = await runAppleScript(`tell application "DesktopRenamer" to toggle active label`);
+    const status = result === "true" ? "Visible" : "Hidden";
+    await showHUD(`Active Label: ${status}`);
   } catch {
-    await showHUD("Failed to toggle active label.");
+    await showHUD("Failed to toggle active label. Is DesktopRenamer running?");
   }
 }

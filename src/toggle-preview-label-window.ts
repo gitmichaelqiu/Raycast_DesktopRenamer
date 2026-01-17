@@ -3,9 +3,10 @@ import { runAppleScript } from "@raycast/utils";
 
 export default async function Command() {
   try {
-    await runAppleScript(`tell application "DesktopRenamer" to toggle preview label`);
-    await showHUD("Toggled Preview Label Window");
+    const result = await runAppleScript(`tell application "DesktopRenamer" to toggle preview label`);
+    const status = result === "true" ? "Visible" : "Hidden";
+    await showHUD(`Preview Label: ${status}`);
   } catch {
-    await showHUD("Failed to toggle preview label.");
+    await showHUD("Failed to toggle preview label. Is DesktopRenamer running?");
   }
 }
