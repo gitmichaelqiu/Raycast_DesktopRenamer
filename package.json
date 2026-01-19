@@ -62,6 +62,18 @@
       "subtitle": "Visibility on Desktop",
       "description": "Show/hide the Active Label Window from the desktop.",
       "mode": "no-view"
+    },
+    {
+      "name": "current-desktop",
+      "title": "Current Desktop",
+      "description": "Show the name of the current desktop",
+      "mode": "view"
+    },
+    {
+      "name": "switch-to-desktop",
+      "title": "Switch to Desktop",
+      "description": "List all desktops and switch to one",
+      "mode": "view"
     }
   ],
   "dependencies": {
