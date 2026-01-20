@@ -72,7 +72,7 @@ export default function Command() {
             title={space.name}
             // Highlight the icon and add a tag if it's the current desktop
             icon={{ 
-              source: Icon.Monitor, 
+              source: Icon.Desktop, 
               tintColor: isCurrent ? Color.Blue : undefined 
             }}
             accessories={
