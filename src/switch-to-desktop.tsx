@@ -1,6 +1,5 @@
-import { ActionPanel, Action, List, showToast, Toast, closeMainWindow, Icon } from "@raycast/api";
-import { runAppleScript } from "@raycast/utils";
-import { useEffect, useState } from "react";
+import { List, ActionPanel, Action, Icon, Color, showToast, Toast } from "@raycast/api";
+import { usePromise, runAppleScript } from "@raycast/utils";
 
 interface Space {
   id: string;
@@ -8,68 +7,91 @@ interface Space {
 }
 
 export default function Command() {
-  const [spaces, setSpaces] = useState<Space[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data, isLoading } = usePromise(async () => {
+    // 1. Get all spaces (ID|Name format per line)
+    // 2. Get current space name (since we can't easily get current ID to match, we match by name)
+    const script = `
+      try
+        tell application "DesktopRenamer"
+          set allSpaces to get all spaces
+          set currentName to get current space name
+          return allSpaces & "|||||" & currentName
+        end tell
+      on error e
+        return "ERROR: " & e
+      end try
+    `;
 
-  useEffect(() => {
-    async function fetchSpaces() {
-      try {
-        // Returns "ID|Name\nID|Name"
-        const result = await runAppleScript(`tell application "DesktopRenamer" to get all spaces`);
-        
-        if (!result) {
-            setSpaces([]);
-            setIsLoading(false);
-            return;
-        }
+    const result = await runAppleScript(script);
 
-        const parsedSpaces = result.split("\n").map((line) => {
-          const [id, ...nameParts] = line.split("|");
-          return { id, name: nameParts.join("|") };
-        });
-
-        setSpaces(parsedSpaces);
-        setIsLoading(false);
-      } catch (error) {
-        showToast({
-          style: Toast.Style.Failure,
-          title: "Failed to fetch spaces",
-          message: "Is DesktopRenamer running?",
-        });
-        setIsLoading(false);
-      }
+    if (result.startsWith("ERROR")) {
+      throw new Error(result.replace("ERROR: ", ""));
     }
 
-    fetchSpaces();
-  }, []);
+    const [spacesStr, currentName] = result.split("|||||");
+    
+    const spaces: Space[] = spacesStr
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .map((line) => {
+        // Find the first pipe to separate ID from Name
+        const idx = line.indexOf("|");
+        if (idx === -1) return { id: line, name: "Unknown" };
+        
+        const id = line.substring(0, idx);
+        const name = line.substring(idx + 1);
+        return { id, name };
+      });
 
-  const switchSpace = async (spaceId: string) => {
+    return { 
+      spaces, 
+      currentName: currentName.trim() 
+    };
+  });
+
+  async function switchSpace(space: Space) {
     try {
-      await runAppleScript(`tell application "DesktopRenamer" to switch to space "${spaceId}"`);
-      await closeMainWindow(); 
+      await runAppleScript(`tell application "DesktopRenamer" to switch to space "${space.id}"`);
     } catch (error) {
-      showToast({
+      await showToast({
         style: Toast.Style.Failure,
         title: "Failed to switch space",
         message: String(error),
       });
     }
-  };
+  }
 
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search desktops...">
-      {spaces.map((space) => (
-        <List.Item
-          key={space.id}
-          title={space.name}
-          icon={Icon.Desktop}
-          actions={
-            <ActionPanel>
-              <Action title="Switch to Desktop" onAction={() => switchSpace(space.id)} />
-            </ActionPanel>
-          }
-        />
-      ))}
+      {data?.spaces.map((space) => {
+        const isCurrent = space.name === data.currentName;
+        
+        return (
+          <List.Item
+            key={space.id}
+            title={space.name}
+            // Highlight the icon and add a tag if it's the current desktop
+            icon={{ 
+              source: Icon.Monitor, 
+              tintColor: isCurrent ? Color.Blue : undefined 
+            }}
+            accessories={
+              isCurrent
+                ? [{ tag: { value: "Current", color: Color.Blue } }]
+                : []
+            }
+            actions={
+              <ActionPanel>
+                <Action 
+                  title="Switch to Desktop" 
+                  icon={Icon.Desktop}
+                  onAction={() => switchSpace(space)} 
+                />
+              </ActionPanel>
+            }
+          />
+        );
+      })}
     </List>
   );
 }
