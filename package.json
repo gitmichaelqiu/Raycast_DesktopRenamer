@@ -67,7 +67,7 @@
       "name": "current-desktop",
       "title": "Current Desktop",
       "description": "Show the name of the current desktop",
-      "mode": "view"
+      "mode": "no-view"
     },
     {
       "name": "switch-to-desktop",
