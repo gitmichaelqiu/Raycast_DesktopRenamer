@@ -16,10 +16,12 @@
   "license": "MIT",
   "commands": [
     {
-      "name": "toggle-menubar-item",
-      "title": "Toggle Menubar Item",
-      "description": "Toggle the visibility of the menubar item.",
-      "mode": "no-view"
+      "name": "current-desktop",
+      "title": "Current Desktop",
+      "subtitle": "DesktopRenamer",
+      "description": "Show the currently active desktop with live status.",
+      "mode": "no-view",
+      "interval": "2s"
     },
     {
       "name": "toggle-space-label-windows",
