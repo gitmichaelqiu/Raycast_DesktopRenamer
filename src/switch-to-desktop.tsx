@@ -4,12 +4,14 @@ import { usePromise, runAppleScript } from "@raycast/utils";
 interface Space {
   id: string;
   name: string;
+  displayID: string;
+  num: number;
 }
 
 export default function Command() {
   const { data, isLoading } = usePromise(async () => {
-    // 1. Get all spaces (ID|Name format per line)
-    // 2. Get current space name (since we can't easily get current ID to match, we match by name)
+    // 1. Get all spaces (ID|Name|DisplayID|Num format per line)
+    // 2. Get current space name
     const script = `
       try
         tell application "DesktopRenamer"
@@ -34,13 +36,15 @@ export default function Command() {
       .split("\n")
       .filter((line) => line.trim().length > 0)
       .map((line) => {
-        // Find the first pipe to separate ID from Name
-        const idx = line.indexOf("|");
-        if (idx === -1) return { id: line, name: "Unknown" };
+        // Format: ID|Name|DisplayID|Num
+        // Backward compatibility: If only ID|Name, handle gracefully
+        const parts = line.split("|");
+        const id = parts[0];
+        const name = parts[1] || "Unknown";
+        const displayID = parts[2] || "Main";
+        const num = parseInt(parts[3] || "0", 10);
         
-        const id = line.substring(0, idx);
-        const name = line.substring(idx + 1);
-        return { id, name };
+        return { id, name, displayID, num };
       });
 
     return { 
@@ -61,37 +65,56 @@ export default function Command() {
     }
   }
 
+  // Group spaces by Display ID
+  const groupedSpaces = data?.spaces.reduce((acc, space) => {
+    const group = acc[space.displayID] || [];
+    group.push(space);
+    acc[space.displayID] = group;
+    return acc;
+  }, {} as Record<string, Space[]>) || {};
+
+  // Sort groups: Main first (usually has ID "Main" or similar, or based on content)
+  // We can try to sort visually or just iterate keys.
+  // Since the AppleScript returns sorted list from SpaceManager (Main first), 
+  // relying on array order is safer if we preserve it.
+  
+  // Alternative: Just simple List with sections based on iteration
+  // We need to know when display changes.
+  
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search desktops...">
-      {data?.spaces.map((space) => {
-        const isCurrent = space.name === data.currentName;
-        
-        return (
-          <List.Item
-            key={space.id}
-            title={space.name}
-            // Highlight the icon and add a tag if it's the current desktop
-            icon={{ 
-              source: Icon.Desktop, 
-              tintColor: isCurrent ? Color.Blue : undefined 
-            }}
-            accessories={
-              isCurrent
-                ? [{ tag: { value: "Current", color: Color.Blue } }]
-                : []
-            }
-            actions={
-              <ActionPanel>
-                <Action 
-                  title="Switch to Desktop" 
-                  icon={Icon.Desktop}
-                  onAction={() => switchSpace(space)} 
-                />
-              </ActionPanel>
-            }
-          />
-        );
-      })}
+      {Object.entries(groupedSpaces).map(([displayID, spaces]) => (
+        <List.Section key={displayID} title={displayID}>
+          {spaces.map((space) => {
+             const isCurrent = space.name === data?.currentName;
+             return (
+               <List.Item
+                 key={space.id}
+                 title={space.name}
+                 subtitle={`Space ${space.num}`}
+                 icon={{ 
+                   source: Icon.Desktop, 
+                   tintColor: isCurrent ? Color.Blue : undefined 
+                 }}
+                 accessories={
+                   isCurrent
+                     ? [{ tag: { value: "Current", color: Color.Blue } }]
+                     : []
+                 }
+                 actions={
+                   <ActionPanel>
+                     <Action 
+                       title="Switch to Desktop" 
+                       icon={Icon.Desktop}
+                       onAction={() => switchSpace(space)} 
+                     />
+                   </ActionPanel>
+                 }
+               />
+             );
+          })}
+        </List.Section>
+      ))}
     </List>
   );
 }
