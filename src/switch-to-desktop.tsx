@@ -1,4 +1,4 @@
-import { List, ActionPanel, Action, Icon, Color, showToast, Toast } from "@raycast/api";
+import { List, ActionPanel, Action, Icon, Color, showToast, Toast, Form, useNavigation } from "@raycast/api";
 import { usePromise, runAppleScript } from "@raycast/utils";
 
 interface Space {
@@ -31,7 +31,7 @@ export default function Command() {
     }
 
     const [spacesStr, currentName] = result.split("|||||");
-    
+
     const spaces: Space[] = spacesStr
       .split("\n")
       .filter((line) => line.trim().length > 0)
@@ -43,13 +43,13 @@ export default function Command() {
         const name = parts[1] || "Unknown";
         const displayID = parts[2] || "Main";
         const num = parseInt(parts[3] || "0", 10);
-        
+
         return { id, name, displayID, num };
       });
 
-    return { 
-      spaces, 
-      currentName: currentName.trim() 
+    return {
+      spaces,
+      currentName: currentName.trim()
     };
   });
 
@@ -77,44 +77,81 @@ export default function Command() {
   // We can try to sort visually or just iterate keys.
   // Since the AppleScript returns sorted list from SpaceManager (Main first), 
   // relying on array order is safer if we preserve it.
-  
+
   // Alternative: Just simple List with sections based on iteration
   // We need to know when display changes.
-  
+
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search desktops...">
       {Object.entries(groupedSpaces).map(([displayID, spaces]) => (
         <List.Section key={displayID} title={displayID}>
           {spaces.map((space) => {
-             const isCurrent = space.name === data?.currentName;
-             return (
-               <List.Item
-                 key={space.id}
-                 title={space.name}
-                 subtitle={`Space ${space.num}`}
-                 icon={{ 
-                   source: Icon.Desktop, 
-                   tintColor: isCurrent ? Color.Blue : undefined 
-                 }}
-                 accessories={
-                   isCurrent
-                     ? [{ tag: { value: "Current", color: Color.Blue } }]
-                     : []
-                 }
-                 actions={
-                   <ActionPanel>
-                     <Action 
-                       title="Switch to Desktop" 
-                       icon={Icon.Desktop}
-                       onAction={() => switchSpace(space)} 
-                     />
-                   </ActionPanel>
-                 }
-               />
-             );
+            const isCurrent = space.name === data?.currentName;
+            return (
+              <List.Item
+                key={space.id}
+                title={space.name}
+                subtitle={`Space ${space.num}`}
+                icon={{
+                  source: Icon.Desktop,
+                  tintColor: isCurrent ? Color.Blue : undefined
+                }}
+                accessories={
+                  isCurrent
+                    ? [{ tag: { value: "Current", color: Color.Blue } }]
+                    : []
+                }
+                actions={
+                  <ActionPanel>
+                    <Action
+                      title="Switch to Desktop"
+                      icon={Icon.Desktop}
+                      onAction={() => switchSpace(space)}
+                    />
+                    <Action.Push
+                      title="Rename Space"
+                      shortcut={{ modifiers: ["cmd"], key: "r" }}
+                      icon={Icon.Pencil}
+                      target={<RenameSpaceForm space={space} onRename={() => {
+                        // Ideally refresh data, but revalidate is implicit on back nav usually?
+                        // Or we trigger a revalidation.
+                        // We can assume optimistic update or just rely on re-run.
+                      }} />}
+                    />
+                  </ActionPanel>
+                }
+              />
+            );
           })}
         </List.Section>
       ))}
     </List>
+  );
+}
+
+function RenameSpaceForm({ space, onRename }: { space: Space; onRename: () => void }) {
+  const { pop } = useNavigation();
+
+  async function handleRename(values: { name: string }) {
+    try {
+      await runAppleScript(`tell application "DesktopRenamer" to rename space "${space.id}" to "${values.name}"`);
+      await showToast({ style: Toast.Style.Success, title: "Renamed space" });
+      onRename();
+      pop();
+    } catch (error) {
+      await showToast({ style: Toast.Style.Failure, title: "Failed to rename", message: String(error) });
+    }
+  }
+
+  return (
+    <Form
+      actions={
+        <ActionPanel>
+          <Action.SubmitForm title="Rename" onSubmit={handleRename} />
+        </ActionPanel>
+      }
+    >
+      <Form.TextField id="name" title="New Name" defaultValue={space.name} placeholder="Enter new name" />
+    </Form>
   );
 }
