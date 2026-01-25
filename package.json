@@ -73,7 +73,7 @@
     },
     {
       "name": "switch-to-desktop",
-      "title": "Switch to Desktop",
+      "title": "Switch Desktop",
       "description": "List all desktops and switch to one",
       "mode": "view"
     }
