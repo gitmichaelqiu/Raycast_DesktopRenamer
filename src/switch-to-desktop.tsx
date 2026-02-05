@@ -1,5 +1,6 @@
 import { List, ActionPanel, Action, Icon, Color, showToast, Toast, Form, useNavigation } from "@raycast/api";
-import { usePromise, runAppleScript } from "@raycast/utils";
+import { usePromise } from "@raycast/utils";
+import { runDesktopRenamerCommand } from "./utils";
 
 interface Space {
   id: string;
@@ -9,84 +10,77 @@ interface Space {
 }
 
 export default function Command() {
-  const { data, isLoading } = usePromise(async () => {
+  const { data, isLoading, error } = usePromise(async () => {
     // 1. Get all spaces (ID|Name|DisplayID|Num format per line)
     // 2. Get current space name
-    const script = `
-      try
-        tell application "DesktopRenamer"
-          set allSpaces to get all spaces
-          set currentName to get current space name
-          return allSpaces & "|||||" & currentName
-        end tell
-      on error e
-        return "ERROR: " & e
-      end try
-    `;
+    const script = `get all spaces) & "|||||" & (get current space name`;
+    // We use runDesktopRenamerCommand to reuse the connection check logic, 
+    // but we need to pass the raw AppleScript command content slightly differently or stick to runAppleScript with custom check.
+    // runDesktopRenamerCommand wraps "tell application..."
+    // So we can pass: `get all spaces) & "|||||" & (get current space name` 
+    // wait, the previous script was `return allSpaces...`. runDesktopRenamerCommand returns the result string.
 
-    const result = await runAppleScript(script);
+    // Let's rewrite the script to be a simple one-liner compatible with "tell app ... to [command]"
+    // Or just use runDesktopRenamerCommand with a compound command.
+    // "tell app ... to set x to ... " is hard to pipe via `runDesktopRenamerCommand` which does `tell app ... to [command]`.
 
-    if (result.startsWith("ERROR")) {
-      throw new Error(result.replace("ERROR: ", ""));
-    }
+    // So we stick to runDesktopRenamerCommand strictly for simple commands OR we make utils expose a robust "runScript" that handles the tell block.
+    // CURRENT utils: `tell application "DesktopRenamer" to ${command}`
+    // We can't easily do complex blocks unless we change utils.
 
-    const [spacesStr, currentName] = result.split("|||||");
+    // Strategy: Use runDesktopRenamerCommand with a computed string that works in one line or change utils?
+    // Changing utils to support full blocks is better but risky for other callers.
 
-    const spaces: Space[] = spacesStr
+    // Let's stick to using `runDesktopRenamerCommand` for the individual actions.
+    // For the data loading, we'll manually wrap `runAppleScript` with the "Open App" toast logic if it fails.
+
+    return await runDesktopRenamerCommand(`return (get all spaces) & "|||||" & (get current space name)`);
+  });
+
+  // Parse data
+  let spaces: Space[] = [];
+  let currentName = "";
+
+  if (data) {
+    const [spacesStr, curName] = data.split("|||||");
+    currentName = curName ? curName.trim() : "";
+    spaces = spacesStr
       .split("\n")
       .filter((line) => line.trim().length > 0)
       .map((line) => {
-        // Format: ID|Name|DisplayID|Num
-        // Backward compatibility: If only ID|Name, handle gracefully
         const parts = line.split("|");
-        const id = parts[0];
-        const name = parts[1] || "Unknown";
-        const displayID = parts[2] || "Main";
-        const num = parseInt(parts[3] || "0", 10);
-
-        return { id, name, displayID, num };
+        return {
+          id: parts[0],
+          name: parts[1] || "Unknown",
+          displayID: parts[2] || "Main",
+          num: parseInt(parts[3] || "0", 10)
+        };
       });
-
-    return {
-      spaces,
-      currentName: currentName.trim()
-    };
-  });
+  }
 
   async function switchSpace(space: Space) {
     try {
-      await runAppleScript(`tell application "DesktopRenamer" to switch to space "${space.id}"`);
-    } catch (error) {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to switch space",
-        message: String(error),
-      });
+      await runDesktopRenamerCommand(`switch to space "${space.id}"`);
+    } catch {
+      // Handled by utils
     }
   }
 
-  // Group spaces by Display ID
-  const groupedSpaces = data?.spaces.reduce((acc, space) => {
+  // ... Grouping logic ...
+  const groupedSpaces = spaces.reduce((acc, space) => {
     const group = acc[space.displayID] || [];
     group.push(space);
     acc[space.displayID] = group;
     return acc;
   }, {} as Record<string, Space[]>) || {};
 
-  // Sort groups: Main first (usually has ID "Main" or similar, or based on content)
-  // We can try to sort visually or just iterate keys.
-  // Since the AppleScript returns sorted list from SpaceManager (Main first), 
-  // relying on array order is safer if we preserve it.
-
-  // Alternative: Just simple List with sections based on iteration
-  // We need to know when display changes.
-
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search desktops...">
+      {/* ... List Logic ... */}
       {Object.entries(groupedSpaces).map(([displayID, spaces]) => (
         <List.Section key={displayID} title={displayID}>
           {spaces.map((space) => {
-            const isCurrent = space.name === data?.currentName;
+            const isCurrent = space.name === currentName;
             return (
               <List.Item
                 key={space.id}
@@ -97,9 +91,7 @@ export default function Command() {
                   tintColor: isCurrent ? Color.Blue : undefined
                 }}
                 accessories={
-                  isCurrent
-                    ? [{ tag: { value: "Current", color: Color.Blue } }]
-                    : []
+                  isCurrent ? [{ tag: { value: "Current", color: Color.Blue } }] : []
                 }
                 actions={
                   <ActionPanel>
@@ -113,9 +105,7 @@ export default function Command() {
                       shortcut={{ modifiers: ["cmd"], key: "r" }}
                       icon={Icon.Pencil}
                       target={<RenameSpaceForm space={space} onRename={() => {
-                        // Ideally refresh data, but revalidate is implicit on back nav usually?
-                        // Or we trigger a revalidation.
-                        // We can assume optimistic update or just rely on re-run.
+                        // trigger revalidation?
                       }} />}
                     />
                   </ActionPanel>
@@ -134,14 +124,15 @@ function RenameSpaceForm({ space, onRename }: { space: Space; onRename: () => vo
 
   async function handleRename(values: { name: string }) {
     try {
-      await runAppleScript(`tell application "DesktopRenamer" to rename space "${space.id}" to "${values.name}"`);
+      await runDesktopRenamerCommand(`rename space "${space.id}" to "${values.name}"`);
       await showToast({ style: Toast.Style.Success, title: "Renamed space" });
       onRename();
       pop();
-    } catch (error) {
-      await showToast({ style: Toast.Style.Failure, title: "Failed to rename", message: String(error) });
+    } catch {
+      // Handled
     }
   }
+  // ...
 
   return (
     <Form
