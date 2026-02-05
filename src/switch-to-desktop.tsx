@@ -1,5 +1,5 @@
-import { List, ActionPanel, Action, Icon, Color, showToast, Toast, Form, useNavigation } from "@raycast/api";
-import { usePromise } from "@raycast/utils";
+import { List, ActionPanel, Action, Icon, Color, showToast, Toast, Form, useNavigation, open } from "@raycast/api";
+import { usePromise, runAppleScript } from "@raycast/utils";
 import { runDesktopRenamerCommand } from "./utils";
 
 interface Space {
@@ -11,30 +11,26 @@ interface Space {
 
 export default function Command() {
   const { data, isLoading, error } = usePromise(async () => {
-    // 1. Get all spaces (ID|Name|DisplayID|Num format per line)
-    // 2. Get current space name
-    const script = `get all spaces) & "|||||" & (get current space name`;
-    // We use runDesktopRenamerCommand to reuse the connection check logic, 
-    // but we need to pass the raw AppleScript command content slightly differently or stick to runAppleScript with custom check.
-    // runDesktopRenamerCommand wraps "tell application..."
-    // So we can pass: `get all spaces) & "|||||" & (get current space name` 
-    // wait, the previous script was `return allSpaces...`. runDesktopRenamerCommand returns the result string.
-
-    // Let's rewrite the script to be a simple one-liner compatible with "tell app ... to [command]"
-    // Or just use runDesktopRenamerCommand with a compound command.
-    // "tell app ... to set x to ... " is hard to pipe via `runDesktopRenamerCommand` which does `tell app ... to [command]`.
-
-    // So we stick to runDesktopRenamerCommand strictly for simple commands OR we make utils expose a robust "runScript" that handles the tell block.
-    // CURRENT utils: `tell application "DesktopRenamer" to ${command}`
-    // We can't easily do complex blocks unless we change utils.
-
-    // Strategy: Use runDesktopRenamerCommand with a computed string that works in one line or change utils?
-    // Changing utils to support full blocks is better but risky for other callers.
-
-    // Let's stick to using `runDesktopRenamerCommand` for the individual actions.
-    // For the data loading, we'll manually wrap `runAppleScript` with the "Open App" toast logic if it fails.
-
-    return await runDesktopRenamerCommand(`return (get all spaces) & "|||||" & (get current space name)`);
+    try {
+      return await runAppleScript(`
+        tell application "DesktopRenamer"
+          set allSpaces to get all spaces
+          set currentName to get current space name
+          return allSpaces & "|||||" & currentName
+        end tell
+      `);
+    } catch (error) {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Command Failed",
+        message: "Is DesktopRenamer running?",
+        primaryAction: {
+          title: "Open DesktopRenamer",
+          onAction: () => open("DesktopRenamer.app"),
+        },
+      });
+      return "";
+    }
   });
 
   // Parse data
