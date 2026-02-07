@@ -10,7 +10,7 @@ interface Space {
 }
 
 export default function Command() {
-  const { data, isLoading, error } = usePromise(async () => {
+  const { data, isLoading } = usePromise(async () => {
     try {
       return await runAppleScript(`
         tell application "DesktopRenamer"
@@ -19,7 +19,7 @@ export default function Command() {
           return allSpaces & "|||||" & currentName
         end tell
       `);
-    } catch (error) {
+    } catch {
       await showToast({
         style: Toast.Style.Failure,
         title: "Command Failed",
