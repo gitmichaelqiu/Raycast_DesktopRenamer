@@ -49,7 +49,7 @@ export default function Command() {
           id: parts[0],
           name: parts[1] || "Unknown",
           displayID: parts[2] || "Main",
-          num: parseInt(parts[3] || "0", 10)
+          num: parseInt(parts[3] || "0", 10),
         };
       });
   }
@@ -62,13 +62,16 @@ export default function Command() {
     }
   }
 
-  // ... Grouping logic ...
-  const groupedSpaces = spaces.reduce((acc, space) => {
-    const group = acc[space.displayID] || [];
-    group.push(space);
-    acc[space.displayID] = group;
-    return acc;
-  }, {} as Record<string, Space[]>) || {};
+  const groupedSpaces =
+    spaces.reduce(
+      (acc, space) => {
+        const group = acc[space.displayID] || [];
+        group.push(space);
+        acc[space.displayID] = group;
+        return acc;
+      },
+      {} as Record<string, Space[]>,
+    ) || {};
 
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search desktops...">
@@ -84,25 +87,24 @@ export default function Command() {
                 subtitle={`Space ${space.num}`}
                 icon={{
                   source: Icon.Desktop,
-                  tintColor: isCurrent ? Color.Blue : undefined
+                  tintColor: isCurrent ? Color.Blue : undefined,
                 }}
-                accessories={
-                  isCurrent ? [{ tag: { value: "Current", color: Color.Blue } }] : []
-                }
+                accessories={isCurrent ? [{ tag: { value: "Current", color: Color.Blue } }] : []}
                 actions={
                   <ActionPanel>
-                    <Action
-                      title="Switch to Desktop"
-                      icon={Icon.Desktop}
-                      onAction={() => switchSpace(space)}
-                    />
+                    <Action title="Switch to Desktop" icon={Icon.Desktop} onAction={() => switchSpace(space)} />
                     <Action.Push
                       title="Rename Space"
                       shortcut={{ modifiers: ["cmd"], key: "r" }}
                       icon={Icon.Pencil}
-                      target={<RenameSpaceForm space={space} onRename={() => {
-                        // trigger revalidation?
-                      }} />}
+                      target={
+                        <RenameSpaceForm
+                          space={space}
+                          onRename={() => {
+                            // trigger revalidation?
+                          }}
+                        />
+                      }
                     />
                   </ActionPanel>
                 }
@@ -128,7 +130,6 @@ function RenameSpaceForm({ space, onRename }: { space: Space; onRename: () => vo
       // Handled
     }
   }
-  // ...
 
   return (
     <Form
