@@ -55,7 +55,8 @@ export default function Command() {
 
   async function switchSpace(space: Space) {
     try {
-      await runDesktopRenamerCommand(`switch to space "${space.id}"`);
+      const sanitizedId = space.id.replace(/"/g, '\\"');
+      await runDesktopRenamerCommand(`switch to space "${sanitizedId}"`);
     } catch {
       // Handled by utils
     }
@@ -113,7 +114,8 @@ function RenameSpaceForm({ space, onRename }: { space: Space; onRename: () => vo
 
   async function handleRename(values: { name: string }) {
     try {
-      await runDesktopRenamerCommand(`rename space "${space.id}" to "${values.name}"`);
+      const sanitizedName = values.name.replace(/"/g, '\\"');
+      await runDesktopRenamerCommand(`rename space "${space.id}" to "${sanitizedName}"`);
       await showToast({ style: Toast.Style.Success, title: "Renamed space" });
       onRename();
       pop();
