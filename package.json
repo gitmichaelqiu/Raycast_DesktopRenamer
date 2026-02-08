@@ -15,7 +15,6 @@
   ],
   "license": "MIT",
   "commands": [
-  "commands": [
     {
       "name": "current-desktop",
       "title": "Current Desktop",
