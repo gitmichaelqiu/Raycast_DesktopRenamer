@@ -1,6 +1,6 @@
 import { List, ActionPanel, Action, Icon, Color, showToast, Toast, Form, useNavigation, open } from "@raycast/api";
 import { usePromise, runAppleScript } from "@raycast/utils";
-import { runDesktopRenamerCommand } from "./utils";
+import { runDesktopRenamerCommand, checkDesktopRenamerRunning } from "./utils";
 
 interface Space {
   id: string;
@@ -12,11 +12,15 @@ interface Space {
 export default function Command() {
   const { data, isLoading, revalidate } = usePromise(async () => {
     try {
+      const isRunning = await checkDesktopRenamerRunning();
+      if (!isRunning) {
+        throw new Error("DesktopRenamer is not running");
+      }
       return await runAppleScript(`
         tell application "DesktopRenamer"
           set allSpaces to get all spaces
           set currentName to get current space name
-          return allSpaces & "|||||" & currentName
+          return allSpaces & "~~~" & currentName
         end tell
       `);
     } catch {
@@ -37,13 +41,13 @@ export default function Command() {
   let currentName = "";
 
   if (data) {
-    const [spacesStr, curName] = data.split("|||||");
+    const [spacesStr, curName] = data.split("~~~");
     currentName = curName ? curName.trim() : "";
     spaces = spacesStr
       .split("\n")
       .filter((line) => line.trim().length > 0)
       .map((line) => {
-        const parts = line.split("|");
+        const parts = line.split("~");
         return {
           id: parts[0],
           name: parts[1] || "Unknown",
@@ -116,7 +120,7 @@ function RenameSpaceForm({ space, onRename }: { space: Space; onRename: () => vo
 
   async function handleRename(values: { name: string }) {
     try {
-      const sanitizedName = values.name.replace(/"/g, '\\"');
+      const sanitizedName = values.name.replace(/"/g, '\\"').replace(/~/g, "");
       await runDesktopRenamerCommand(`rename space "${space.id}" to "${sanitizedName}"`);
       await showToast({ style: Toast.Style.Success, title: "Renamed space" });
       onRename();

@@ -5,11 +5,11 @@ export default async function Command(props: LaunchProps<{ arguments: Arguments.
   const { newName } = props.arguments;
 
   try {
-    const sanitizedName = newName.replace(/"/g, '\\"');
+    const sanitizedName = newName.replace(/"/g, '\\"').replace(/~/g, "");
 
     await runAppleScript(`tell application "DesktopRenamer" to rename current space "${sanitizedName}"`);
 
-    await showHUD(`Renamed space to "${newName}"`);
+    await showHUD(`Renamed space to "${sanitizedName}"`);
   } catch {
     await showHUD("Failed to rename space. Is DesktopRenamer running?");
   }
