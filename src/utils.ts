@@ -19,7 +19,39 @@ export async function checkDesktopRenamerRunning(): Promise<boolean> {
   }
 }
 
-export async function runDesktopRenamerCommand(command: string, errorMessage = "Is DesktopRenamer running?") {
+export async function handleDesktopRenamerError(error: unknown, errorMessage = "Is DesktopRenamer running?") {
+  if (environment.launchType === LaunchType.UserInitiated) {
+    if (error instanceof Error && error.message === "NotInstalled") {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "DesktopRenamer Not Installed",
+        message: "Please install DesktopRenamer to use this command.",
+        primaryAction: {
+          title: "Download App",
+          onAction: () => open("https://github.com/gitmichaelqiu/DesktopRenamer"),
+        },
+      });
+    } else {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Command Failed",
+        message: errorMessage,
+        primaryAction: {
+          title: "Open DesktopRenamer",
+          onAction: async () => {
+            try {
+              await open("/Applications/DesktopRenamer.app");
+            } catch {
+              await showToast({ style: Toast.Style.Failure, title: "Failed to launch app" });
+            }
+          },
+        },
+      });
+    }
+  }
+}
+
+export async function runDesktopRenamerScript(scriptContent: string, errorMessage = "Is DesktopRenamer running?") {
   try {
     const isInstalled = await isDesktopRenamerInstalled();
     if (!isInstalled) {
@@ -30,37 +62,13 @@ export async function runDesktopRenamerCommand(command: string, errorMessage = "
     if (!isRunning) {
       throw new Error("NotRunning");
     }
-    return await runAppleScript(`tell application "DesktopRenamer" to ${command}`);
+    return await runAppleScript(scriptContent);
   } catch (error) {
-    if (environment.launchType === LaunchType.UserInitiated) {
-      if (error instanceof Error && error.message === "NotInstalled") {
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "DesktopRenamer Not Installed",
-          message: "Please install DesktopRenamer to use this command.",
-          primaryAction: {
-            title: "Download App",
-            onAction: () => open("https://github.com/gitmichaelqiu/DesktopRenamer"),
-          },
-        });
-      } else {
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Command Failed",
-          message: errorMessage,
-          primaryAction: {
-            title: "Open DesktopRenamer",
-            onAction: async () => {
-              try {
-                await open("/Applications/DesktopRenamer.app");
-              } catch {
-                await showToast({ style: Toast.Style.Failure, title: "Failed to launch app" });
-              }
-            },
-          },
-        });
-      }
-    }
+    await handleDesktopRenamerError(error, errorMessage);
     throw error;
   }
+}
+
+export async function runDesktopRenamerCommand(command: string, errorMessage = "Is DesktopRenamer running?") {
+  return await runDesktopRenamerScript(`tell application "DesktopRenamer" to ${command}`, errorMessage);
 }
