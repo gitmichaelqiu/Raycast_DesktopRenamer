@@ -1,6 +1,10 @@
 import { showToast, Toast, open, environment, LaunchType } from "@raycast/api";
 import { runAppleScript } from "@raycast/utils";
 
+export function escapeAppleScriptString(str: string): string {
+  return str.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
 export async function checkDesktopRenamerRunning(): Promise<boolean> {
   try {
     const isRunning = await runAppleScript('tell application "System Events" to return (name of processes) contains "DesktopRenamer"');

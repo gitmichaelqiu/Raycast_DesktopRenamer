@@ -1,6 +1,6 @@
 import { List, ActionPanel, Action, Icon, Color, showToast, Toast, Form, useNavigation, open } from "@raycast/api";
 import { usePromise, runAppleScript } from "@raycast/utils";
-import { runDesktopRenamerCommand, checkDesktopRenamerRunning } from "./utils";
+import { runDesktopRenamerCommand, checkDesktopRenamerRunning, escapeAppleScriptString } from "./utils";
 
 interface Space {
   id: string;
@@ -59,7 +59,7 @@ export default function Command() {
 
   async function switchSpace(space: Space) {
     try {
-      const sanitizedId = space.id.replace(/"/g, '\\"');
+      const sanitizedId = escapeAppleScriptString(space.id);
       await runDesktopRenamerCommand(`switch to space "${sanitizedId}"`);
       await new Promise((resolve) => setTimeout(resolve, 500));
       await revalidate();
@@ -120,7 +120,7 @@ function RenameSpaceForm({ space, onRename }: { space: Space; onRename: () => vo
 
   async function handleRename(values: { name: string }) {
     try {
-      const sanitizedName = values.name.replace(/"/g, '\\"').replace(/~/g, "");
+      const sanitizedName = escapeAppleScriptString(values.name).replace(/~/g, "");
       await runDesktopRenamerCommand(`rename space "${space.id}" to "${sanitizedName}"`);
       await showToast({ style: Toast.Style.Success, title: "Renamed space" });
       onRename();
