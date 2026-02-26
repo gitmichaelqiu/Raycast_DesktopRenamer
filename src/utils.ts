@@ -7,9 +7,7 @@ export function escapeAppleScriptString(str: string): string {
 
 export async function checkDesktopRenamerRunning(): Promise<boolean> {
   try {
-    const isRunning = await runAppleScript(
-      'tell application "System Events" to return (name of processes) contains "DesktopRenamer"',
-    );
+    const isRunning = await runAppleScript('tell application "System Events" to return (name of processes) contains "DesktopRenamer"');
     return isRunning === "true";
   } catch {
     return false;
@@ -31,7 +29,13 @@ export async function runDesktopRenamerCommand(command: string, errorMessage = "
         message: errorMessage,
         primaryAction: {
           title: "Open DesktopRenamer",
-          onAction: () => open("DesktopRenamer.app"),
+          onAction: async () => {
+            try {
+              await open("/Applications/DesktopRenamer.app");
+            } catch {
+              await showToast({ style: Toast.Style.Failure, title: "Failed to launch app" });
+            }
+          },
         },
       });
     }

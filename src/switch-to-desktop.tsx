@@ -30,7 +30,13 @@ export default function Command() {
         message: "Is DesktopRenamer running?",
         primaryAction: {
           title: "Open DesktopRenamer",
-          onAction: () => open("DesktopRenamer.app"),
+          onAction: async () => {
+            try {
+              await open("/Applications/DesktopRenamer.app");
+            } catch {
+              await showToast({ style: Toast.Style.Failure, title: "Failed to launch app" });
+            }
+          },
         },
       });
       return "";
