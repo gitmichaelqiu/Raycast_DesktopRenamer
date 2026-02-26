@@ -1,5 +1,4 @@
 import { LaunchProps, showHUD } from "@raycast/api";
-import { runAppleScript } from "@raycast/utils";
 import { escapeAppleScriptString, runDesktopRenamerCommand } from "./utils";
 
 export default async function Command(props: LaunchProps<{ arguments: Arguments.RenameCurrentSpace }>) {

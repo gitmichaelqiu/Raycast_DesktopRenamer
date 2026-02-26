@@ -12,7 +12,9 @@ export async function isDesktopRenamerInstalled(): Promise<boolean> {
 
 export async function checkDesktopRenamerRunning(): Promise<boolean> {
   try {
-    const isRunning = await runAppleScript('tell application "System Events" to return (name of processes) contains "DesktopRenamer"');
+    const isRunning = await runAppleScript(
+      'tell application "System Events" to return (name of processes) contains "DesktopRenamer"',
+    );
     return isRunning === "true";
   } catch {
     return false;
