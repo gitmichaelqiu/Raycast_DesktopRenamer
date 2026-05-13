@@ -55,6 +55,12 @@
       "mode": "no-view"
     },
     {
+      "name": "move-window",
+      "title": "Move Window",
+      "description": "List all desktops and move the active window to one",
+      "mode": "view"
+    },
+    {
       "name": "switch-to-desktop",
       "title": "Switch Desktop",
       "description": "List all desktops and switch to one",
