@@ -1,4 +1,4 @@
-import { List, ActionPanel, Action, Icon, Color, showToast, Toast } from "@raycast/api";
+import { List, ActionPanel, Action, Icon, Color, showToast, Toast, Form, useNavigation } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
 import { runDesktopRenamerCommand, escapeAppleScriptString, runDesktopRenamerScript } from "./utils";
 
@@ -84,6 +84,12 @@ export default function Command() {
                 actions={
                   <ActionPanel>
                     <Action title="Move Window" icon={Icon.Window} onAction={() => moveWindow(space)} />
+                    <Action.Push
+                      title="Rename Space"
+                      shortcut={{ modifiers: ["cmd"], key: "r" }}
+                      icon={Icon.Pencil}
+                      target={<RenameSpaceForm space={space} onRename={revalidate} />}
+                    />
                   </ActionPanel>
                 }
               />
@@ -92,5 +98,34 @@ export default function Command() {
         </List.Section>
       ))}
     </List>
+  );
+}
+
+function RenameSpaceForm({ space, onRename }: { space: Space; onRename: () => void }) {
+  const { pop } = useNavigation();
+
+  async function handleRename(values: { name: string }) {
+    try {
+      const sanitizedName = escapeAppleScriptString(values.name).replace(/~/g, "");
+      const sanitizedId = escapeAppleScriptString(space.id);
+      await runDesktopRenamerCommand(`rename space "${sanitizedId}" to "${sanitizedName}"`);
+      await showToast({ style: Toast.Style.Success, title: "Renamed space" });
+      onRename();
+      pop();
+    } catch {
+      // Handled
+    }
+  }
+
+  return (
+    <Form
+      actions={
+        <ActionPanel>
+          <Action.SubmitForm title="Rename" onSubmit={handleRename} />
+        </ActionPanel>
+      }
+    >
+      <Form.TextField id="name" title="New Name" defaultValue={space.name} placeholder="Enter new name" />
+    </Form>
   );
 }
