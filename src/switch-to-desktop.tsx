@@ -55,6 +55,16 @@ export default function Command() {
     }
   }
 
+  async function moveWindow(space: Space) {
+    try {
+      const sanitizedId = escapeAppleScriptString(space.id);
+      await runDesktopRenamerCommand(`move window to space "${sanitizedId}"`);
+      await showToast({ style: Toast.Style.Success, title: `Moved window to ${space.name}` });
+    } catch {
+      // Handled by utils
+    }
+  }
+
   const groupedSpaces =
     spaces.reduce(
       (acc, space) => {
@@ -85,6 +95,12 @@ export default function Command() {
                 actions={
                   <ActionPanel>
                     <Action title="Switch to Desktop" icon={Icon.Desktop} onAction={() => switchSpace(space)} />
+                    <Action
+                      title="Move Window"
+                      icon={Icon.Window}
+                      shortcut={{ modifiers: ["cmd"], key: "return" }}
+                      onAction={() => moveWindow(space)}
+                    />
                     <Action.Push
                       title="Rename Space"
                       shortcut={{ modifiers: ["cmd"], key: "r" }}
