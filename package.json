@@ -23,12 +23,6 @@
       "interval": "10s"
     },
     {
-      "name": "toggle-space-label-windows",
-      "title": "Toggle Space Label Windows",
-      "description": "Toggle both Active & Preview Label Windows.",
-      "mode": "no-view"
-    },
-    {
       "name": "rename-current-space",
       "title": "Rename Current Space",
       "description": "Rename the current space.",
