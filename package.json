@@ -37,6 +37,12 @@
       ]
     },
     {
+      "name": "reload-labels",
+      "title": "Reload Space Labels",
+      "description": "Force reload all space label overlay windows.",
+      "mode": "no-view"
+    },
+    {
       "name": "toggle-active-label-window",
       "title": "Toggle Active Label Window",
       "description": "Toggle the Active Label Window.",
