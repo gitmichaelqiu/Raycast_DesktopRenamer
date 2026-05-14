@@ -1,4 +1,4 @@
-import { List, ActionPanel, Action, Icon, showToast, Toast, popToRoot, Color } from "@raycast/api";
+import { List, ActionPanel, Action, Icon, showToast, Toast, popToRoot, Color, getPreferenceValues } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
 import { useState } from "react";
 import { runDesktopRenamerCommand, runDesktopRenamerScript, escapeAppleScriptString } from "./utils";
@@ -132,11 +132,26 @@ export default function Command() {
         return;
       }
 
+      const prefs = getPreferenceValues<{ returnToOriginalSpace: boolean }>();
+      let originalSpaceId: string | null = null;
+      if (prefs.returnToOriginalSpace) {
+        const currentIdsRaw = await runDesktopRenamerCommand("get current space id");
+        const currentIds = currentIdsRaw.split(",").map((s: string) => s.trim());
+        if (currentIds.length > 0) {
+          originalSpaceId = currentIds[0];
+        }
+      }
+
       // Focus the window (this naturally switches to its space)
       await runDesktopRenamerCommand(`focus window ${entry.windowID} pid ${entry.pid}`);
       await delay(450); // Wait for the natural space switch animation
       // Move via DesktopRenamer's backend
       await runDesktopRenamerCommand(`move window to space "${escapeAppleScriptString(targetSpace.id)}"`);
+      
+      if (originalSpaceId && originalSpaceId !== targetSpace.id) {
+        await delay(600); // Wait for the backend's drag operation to complete
+        await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(originalSpaceId)}"`);
+      }
       await showToast({
         style: Toast.Style.Success,
         title: `Moved "${entry.title}" to ${targetSpace.name}`,

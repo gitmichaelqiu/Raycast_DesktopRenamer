@@ -85,6 +85,16 @@
       "mode": "view"
     }
   ],
+  "preferences": [
+    {
+      "name": "returnToOriginalSpace",
+      "title": "Return to Original Space",
+      "description": "Automatically return to your original desktop after moving windows to a different desktop.",
+      "type": "checkbox",
+      "required": false,
+      "default": true
+    }
+  ],
   "dependencies": {
     "@raycast/api": "^1.104.1",
     "@raycast/utils": "^1.17.0"

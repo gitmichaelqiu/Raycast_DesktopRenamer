@@ -1,4 +1,4 @@
-import { Form, ActionPanel, Action, showToast, Toast, popToRoot, Icon } from "@raycast/api";
+import { List, ActionPanel, Action, showToast, Toast, popToRoot, Icon, Color, getPreferenceValues } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
 import { useState } from "react";
 import { runDesktopRenamerCommand, runDesktopRenamerScript, escapeAppleScriptString } from "./utils";
@@ -57,6 +57,7 @@ function delay(ms: number) {
 
 export default function Command() {
   const [isExecuting, setIsExecuting] = useState(false);
+  const [stagedMoves, setStagedMoves] = useState<Map<number, { window: WindowEntry; targetSpace: SpaceGroup }>>(new Map());
 
   const { data, isLoading } = usePromise(async () => {
     const result = await runDesktopRenamerScript(`
@@ -68,32 +69,34 @@ export default function Command() {
   });
 
   const spaces = data?.spaces ?? [];
-  const windows = data?.windows ?? [];
+  const allWindows = data?.windows ?? [];
 
-  // Group windows by space
+  // Separate windows into staged and unstaged
+  const unstagedWindows = allWindows.filter((w) => !stagedMoves.has(w.windowID));
+  const stagedWindowsArray = Array.from(stagedMoves.values());
+
   const windowsBySpace = new Map<string, WindowEntry[]>();
-  for (const w of windows) {
+  for (const w of unstagedWindows) {
     const list = windowsBySpace.get(w.space.id) ?? [];
     list.push(w);
     windowsBySpace.set(w.space.id, list);
   }
 
-  async function handleSubmit(values: Record<string, string>) {
-    // Collect all moves that are NOT "keep"
-    const moves: { window: WindowEntry; targetSpaceId: string }[] = [];
-    for (const [key, value] of Object.entries(values)) {
-      if (value !== "keep") {
-        const windowID = parseInt(key.replace("win_", ""), 10);
-        const win = windows.find((w) => w.windowID === windowID);
-        if (win && win.space.id !== value) {
-          moves.push({ window: win, targetSpaceId: value });
-        }
-      }
-    }
+  function stageMove(window: WindowEntry, targetSpace: SpaceGroup) {
+    const newStaged = new Map(stagedMoves);
+    newStaged.set(window.windowID, { window, targetSpace });
+    setStagedMoves(newStaged);
+  }
 
-    if (moves.length === 0) {
-      await showToast({ style: Toast.Style.Success, title: "No moves required" });
-      await popToRoot();
+  function unstageMove(windowID: number) {
+    const newStaged = new Map(stagedMoves);
+    newStaged.delete(windowID);
+    setStagedMoves(newStaged);
+  }
+
+  async function executeBatchMove() {
+    if (stagedMoves.size === 0) {
+      await showToast({ style: Toast.Style.Failure, title: "No moves staged" });
       return;
     }
 
@@ -101,15 +104,20 @@ export default function Command() {
     const toast = await showToast({ style: Toast.Style.Animated, title: "Executing batch move..." });
 
     try {
-      // Remember where we started to return later
-      const currentIdsRaw = await runDesktopRenamerCommand("get current space id");
-      const currentIds = currentIdsRaw.split(",").map((s: string) => s.trim());
-      const originalSpaceId = currentIds.length > 0 ? currentIds[0] : null;
+      const prefs = getPreferenceValues<{ returnToOriginalSpace: boolean }>();
+      let originalSpaceId: string | null = null;
+      if (prefs.returnToOriginalSpace) {
+        const currentIdsRaw = await runDesktopRenamerCommand("get current space id");
+        const currentIds = currentIdsRaw.split(",").map((s: string) => s.trim());
+        if (currentIds.length > 0) {
+          originalSpaceId = currentIds[0];
+        }
+      }
 
       // Group moves by the window's SOURCE space to minimize space switching.
       // E.g., we go to Space A, move all targeted windows out, then go to Space B, etc.
-      const movesBySource = new Map<string, typeof moves>();
-      for (const move of moves) {
+      const movesBySource = new Map<string, typeof stagedWindowsArray>();
+      for (const move of stagedWindowsArray) {
         const list = movesBySource.get(move.window.space.id) ?? [];
         list.push(move);
         movesBySource.set(move.window.space.id, list);
@@ -131,7 +139,7 @@ export default function Command() {
           await delay(250); 
           
           // Execute the backend move operation on the active window
-          await runDesktopRenamerCommand(`move window to space "${escapeAppleScriptString(move.targetSpaceId)}"`);
+          await runDesktopRenamerCommand(`move window to space "${escapeAppleScriptString(move.targetSpace.id)}"`);
           await delay(500); // Wait for the backend drag action
           totalMoved++;
 
@@ -145,7 +153,7 @@ export default function Command() {
       }
 
       // Finally, return to the desktop where the user started the command
-      if (originalSpaceId) {
+      if (originalSpaceId && prefs.returnToOriginalSpace) {
         toast.message = "Returning to original desktop...";
         await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(originalSpaceId)}"`);
         await delay(400);
@@ -162,56 +170,79 @@ export default function Command() {
     }
   }
 
+  const ExecuteAction = () => (
+    <Action 
+      title="Confirm & Execute Batch Move" 
+      icon={Icon.Checkmark} 
+      shortcut={{ modifiers: ["cmd"], key: "enter" }} 
+      onAction={executeBatchMove} 
+    />
+  );
+
   return (
-    <Form
-      isLoading={isLoading || isExecuting}
-      actions={
-        <ActionPanel>
-          <Action.SubmitForm title="Execute Batch Move" icon={Icon.Checkmark} onSubmit={handleSubmit} />
-        </ActionPanel>
-      }
-    >
+    <List isLoading={isLoading || isExecuting} searchBarPlaceholder="Search windows...">
+      {stagedWindowsArray.length > 0 && (
+        <List.Section title="Staged Moves (Pending)" subtitle={`${stagedWindowsArray.length} items`}>
+          {stagedWindowsArray.map((move) => (
+            <List.Item
+              key={`staged_${move.window.windowID}`}
+              title={move.window.title}
+              subtitle={move.window.ownerName}
+              icon={move.window.appPath ? { fileIcon: move.window.appPath } : Icon.Window}
+              accessories={[
+                { text: `→ ${move.targetSpace.name}`, color: Color.Green },
+              ]}
+              actions={
+                <ActionPanel>
+                  <ExecuteAction />
+                  <Action 
+                    title="Unstage Move" 
+                    icon={Icon.XMarkCircle} 
+                    shortcut={{ modifiers: ["cmd"], key: "backspace" }} 
+                    onAction={() => unstageMove(move.window.windowID)} 
+                  />
+                </ActionPanel>
+              }
+            />
+          ))}
+        </List.Section>
+      )}
+
       {spaces.map((space) => {
         const spaceWindows = windowsBySpace.get(space.id) ?? [];
         if (spaceWindows.length === 0) return null;
 
         return (
-          <Form.Description 
-            key={`header_${space.id}`} 
-            title={space.name} 
-            text={`${spaceWindows.length} window${spaceWindows.length === 1 ? "" : "s"}`} 
-          />
+          <List.Section key={space.id} title={space.name} subtitle={`${spaceWindows.length} windows`}>
+            {spaceWindows.map((win) => (
+              <List.Item
+                key={`win_${win.windowID}`}
+                title={win.title}
+                subtitle={win.ownerName}
+                icon={win.appPath ? { fileIcon: win.appPath } : Icon.Window}
+                accessories={[{ text: win.space.name, color: Color.SecondaryText }]}
+                actions={
+                  <ActionPanel>
+                    {stagedWindowsArray.length > 0 && <ExecuteAction />}
+                    <ActionPanel.Submenu title="Stage Move to Desktop…" icon={Icon.ArrowRight}>
+                      {spaces
+                        .filter((s) => s.id !== space.id)
+                        .map((targetSpace) => (
+                          <Action
+                            key={targetSpace.id}
+                            title={targetSpace.name}
+                            icon={Icon.Desktop}
+                            onAction={() => stageMove(win, targetSpace)}
+                          />
+                        ))}
+                    </ActionPanel.Submenu>
+                  </ActionPanel>
+                }
+              />
+            ))}
+          </List.Section>
         );
       })}
-      
-      <Form.Separator />
-
-      {spaces.map((space) => {
-        const spaceWindows = windowsBySpace.get(space.id) ?? [];
-        return spaceWindows.map((win) => (
-          <Form.Dropdown
-            key={`win_${win.windowID}`}
-            id={`win_${win.windowID}`}
-            title={win.ownerName}
-            info={win.title}
-            defaultValue="keep"
-          >
-            <Form.Dropdown.Item title="Keep on current desktop" value="keep" icon={Icon.Minus} />
-            <Form.Dropdown.Section title="Move to">
-              {spaces
-                .filter((s) => s.id !== space.id)
-                .map((targetSpace) => (
-                  <Form.Dropdown.Item
-                    key={targetSpace.id}
-                    title={targetSpace.name}
-                    value={targetSpace.id}
-                    icon={Icon.Desktop}
-                  />
-                ))}
-            </Form.Dropdown.Section>
-          </Form.Dropdown>
-        ));
-      })}
-    </Form>
+    </List>
   );
 }
