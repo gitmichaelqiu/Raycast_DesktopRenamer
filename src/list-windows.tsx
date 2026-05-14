@@ -97,17 +97,29 @@ export default function Command() {
 
   async function moveToCurrentDesktop(entry: WindowEntry) {
     try {
+      // Remember where we are now.
       const currentIdsRaw = await runDesktopRenamerCommand("get current space id");
       const currentIds = currentIdsRaw.split(",").map((s: string) => s.trim());
       if (currentIds.length === 0) {
         await showToast({ style: Toast.Style.Failure, title: "Could not determine current desktop" });
         return;
       }
-      // Use the first current space (primary display).
       const targetId = currentIds[0];
-      await runDesktopRenamerCommand(
-        `move specific window ${entry.windowID} from space "${escapeAppleScriptString(entry.space.id)}" to space "${escapeAppleScriptString(targetId)}"`,
-      );
+      if (targetId === entry.space.id) {
+        await showToast({ style: Toast.Style.Success, title: "Window is already on current desktop" });
+        return;
+      }
+
+      // Switch to the window's space, focus it (making it the active window),
+      // then use DesktopRenamer's proven move-active-window backend.
+      await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(entry.space.id)}"`);
+      await delay(600);
+      await runDesktopRenamerCommand(`focus window ${entry.windowID} pid ${entry.pid}`);
+      await delay(400);
+      await runDesktopRenamerCommand(`move window to space "${escapeAppleScriptString(targetId)}"`);
+      await delay(600);
+      // Switch back to the original (current) desktop.
+      await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(targetId)}"`);
       await showToast({
         style: Toast.Style.Success,
         title: `Moved "${entry.title}" to current desktop`,
@@ -120,9 +132,17 @@ export default function Command() {
 
   async function moveToDesktop(entry: WindowEntry, targetSpace: SpaceGroup) {
     try {
-      await runDesktopRenamerCommand(
-        `move specific window ${entry.windowID} from space "${escapeAppleScriptString(entry.space.id)}" to space "${escapeAppleScriptString(targetSpace.id)}"`,
-      );
+      if (entry.space.id === targetSpace.id) {
+        await showToast({ style: Toast.Style.Success, title: "Window is already on that desktop" });
+        return;
+      }
+
+      // Switch to the window's space, focus it, then move via backend.
+      await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(entry.space.id)}"`);
+      await delay(600);
+      await runDesktopRenamerCommand(`focus window ${entry.windowID} pid ${entry.pid}`);
+      await delay(400);
+      await runDesktopRenamerCommand(`move window to space "${escapeAppleScriptString(targetSpace.id)}"`);
       await showToast({
         style: Toast.Style.Success,
         title: `Moved "${entry.title}" to ${targetSpace.name}`,
@@ -131,6 +151,10 @@ export default function Command() {
     } catch {
       // Error handled by utils
     }
+  }
+
+  function delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   return (
