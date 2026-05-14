@@ -1,5 +1,6 @@
-import { List, ActionPanel, Action, Icon, showToast, Toast, popToRoot } from "@raycast/api";
+import { List, ActionPanel, Action, Icon, showToast, Toast, popToRoot, Color } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
+import { useState } from "react";
 import { runDesktopRenamerCommand, runDesktopRenamerScript, escapeAppleScriptString } from "./utils";
 
 interface SpaceGroup {
@@ -41,7 +42,7 @@ function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEn
           pid: parseInt(parts[1], 10),
           ownerName: parts[2],
           appPath: parts[3],
-          title: parts.slice(4).join("|"), // title may contain pipes
+          title: parts.slice(4).join("|"),
           space: { ...currentSpace },
         });
       }
@@ -51,7 +52,9 @@ function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEn
 }
 
 export default function Command() {
-  const { data, isLoading } = usePromise(async () => {
+  const [filterSpaceId, setFilterSpaceId] = useState("all");
+
+  const { data, isLoading, revalidate } = usePromise(async () => {
     const result = await runDesktopRenamerScript(`
       tell application "DesktopRenamer"
         get windows
@@ -60,10 +63,28 @@ export default function Command() {
     return parseWindowData(result);
   });
 
+  const allSpaces = data?.spaces ?? [];
+  const allWindows = data?.windows ?? [];
+
+  // Apply filter
+  const filteredWindows =
+    filterSpaceId === "all" ? allWindows : allWindows.filter((w) => w.space.id === filterSpaceId);
+
+  // Group windows by space ID, preserving space order.
+  const windowsBySpace = new Map<string, WindowEntry[]>();
+  for (const w of filteredWindows) {
+    const list = windowsBySpace.get(w.space.id) ?? [];
+    list.push(w);
+    windowsBySpace.set(w.space.id, list);
+  }
+
+  // Determine which spaces to show (filtered or all).
+  const visibleSpaces =
+    filterSpaceId === "all" ? allSpaces : allSpaces.filter((s) => s.id === filterSpaceId);
+
   async function switchToWindow(entry: WindowEntry) {
     try {
       const sanitizedId = escapeAppleScriptString(entry.space.id);
-      // Switch to the space first, then focus the specific window.
       await runDesktopRenamerCommand(`switch to space "${sanitizedId}"`);
       await new Promise((resolve) => setTimeout(resolve, 400));
       await runDesktopRenamerCommand(`focus window ${entry.windowID} pid ${entry.pid}`);
@@ -74,18 +95,64 @@ export default function Command() {
     }
   }
 
-  // Group windows by space ID, preserving space order from the data.
-  const spaceOrder = data?.spaces ?? [];
-  const windowsBySpace = new Map<string, WindowEntry[]>();
-  for (const w of data?.windows ?? []) {
-    const list = windowsBySpace.get(w.space.id) ?? [];
-    list.push(w);
-    windowsBySpace.set(w.space.id, list);
+  async function moveToCurrentDesktop(entry: WindowEntry) {
+    try {
+      const currentIdsRaw = await runDesktopRenamerCommand("get current space id");
+      const currentIds = currentIdsRaw.split(",").map((s: string) => s.trim());
+      if (currentIds.length === 0) {
+        await showToast({ style: Toast.Style.Failure, title: "Could not determine current desktop" });
+        return;
+      }
+      // Use the first current space (primary display).
+      const targetId = currentIds[0];
+      await runDesktopRenamerCommand(
+        `move specific window ${entry.windowID} to space "${escapeAppleScriptString(targetId)}"`,
+      );
+      await showToast({
+        style: Toast.Style.Success,
+        title: `Moved "${entry.title}" to current desktop`,
+      });
+      revalidate();
+    } catch {
+      // Error handled by utils
+    }
+  }
+
+  async function moveToDesktop(entry: WindowEntry, targetSpace: SpaceGroup) {
+    try {
+      await runDesktopRenamerCommand(
+        `move specific window ${entry.windowID} to space "${escapeAppleScriptString(targetSpace.id)}"`,
+      );
+      await showToast({
+        style: Toast.Style.Success,
+        title: `Moved "${entry.title}" to ${targetSpace.name}`,
+      });
+      revalidate();
+    } catch {
+      // Error handled by utils
+    }
   }
 
   return (
-    <List isLoading={isLoading} searchBarPlaceholder="Search windows...">
-      {spaceOrder.map((space) => {
+    <List
+      isLoading={isLoading}
+      searchBarPlaceholder="Search windows..."
+      searchBarAccessory={
+        <List.Dropdown tooltip="Filter by Desktop" onChange={setFilterSpaceId} defaultValue="all">
+          <List.Dropdown.Item title="All Desktops" value="all" />
+          <List.Dropdown.Section title="Desktops">
+            {allSpaces.map((space) => (
+              <List.Dropdown.Item
+                key={space.id}
+                title={space.name}
+                value={space.id}
+              />
+            ))}
+          </List.Dropdown.Section>
+        </List.Dropdown>
+      }
+    >
+      {visibleSpaces.map((space) => {
         const windows = windowsBySpace.get(space.id) ?? [];
         return (
           <List.Section
@@ -102,6 +169,9 @@ export default function Command() {
                   title={entry.title}
                   subtitle={entry.ownerName}
                   icon={entry.appPath ? { fileIcon: entry.appPath } : Icon.Window}
+                  accessories={[
+                    { tag: { value: entry.space.name, color: Color.SecondaryText } },
+                  ]}
                   actions={
                     <ActionPanel>
                       <Action
@@ -109,6 +179,30 @@ export default function Command() {
                         icon={Icon.Window}
                         onAction={() => switchToWindow(entry)}
                       />
+                      <ActionPanel.Section title="Move Window">
+                        <Action
+                          title="Move to Current Desktop"
+                          icon={Icon.ArrowRight}
+                          shortcut={{ modifiers: ["cmd"], key: "m" }}
+                          onAction={() => moveToCurrentDesktop(entry)}
+                        />
+                        <ActionPanel.Submenu
+                          title="Move to Desktop…"
+                          icon={Icon.List}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "m" }}
+                        >
+                          {allSpaces
+                            .filter((s) => s.id !== entry.space.id)
+                            .map((targetSpace) => (
+                              <Action
+                                key={targetSpace.id}
+                                title={targetSpace.name}
+                                subtitle={`${targetSpace.displayID} · Space ${targetSpace.num}`}
+                                onAction={() => moveToDesktop(entry, targetSpace)}
+                              />
+                            ))}
+                        </ActionPanel.Submenu>
+                      </ActionPanel.Section>
                     </ActionPanel>
                   }
                 />
