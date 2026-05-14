@@ -174,7 +174,7 @@ export default function Command() {
     <Action 
       title="Confirm & Execute Batch Move" 
       icon={Icon.Checkmark} 
-      shortcut={{ modifiers: ["cmd"], key: "enter" }} 
+      shortcut={{ modifiers: ["cmd"], key: "return" }} 
       onAction={executeBatchMove} 
     />
   );
