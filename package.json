@@ -61,6 +61,12 @@
       "mode": "no-view"
     },
     {
+      "name": "list-windows",
+      "title": "List Windows",
+      "description": "List all windows grouped by desktop space and switch to one",
+      "mode": "view"
+    },
+    {
       "name": "move-window",
       "title": "Move Window",
       "description": "List all desktops and move the active window to one",
