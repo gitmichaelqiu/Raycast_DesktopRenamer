@@ -84,9 +84,6 @@ export default function Command() {
 
   async function switchToWindow(entry: WindowEntry) {
     try {
-      const sanitizedId = escapeAppleScriptString(entry.space.id);
-      await runDesktopRenamerCommand(`switch to space "${sanitizedId}"`);
-      await new Promise((resolve) => setTimeout(resolve, 400));
       await runDesktopRenamerCommand(`focus window ${entry.windowID} pid ${entry.pid}`);
       await showToast({ style: Toast.Style.Success, title: `Switched to ${entry.title}` });
       await popToRoot();
@@ -110,14 +107,12 @@ export default function Command() {
         return;
       }
 
-      // Switch to the window's space, focus it (making it the active window),
-      // then use DesktopRenamer's proven move-active-window backend.
-      await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(entry.space.id)}"`);
-      await delay(600);
+      // Focus the window (this naturally switches to its space)
       await runDesktopRenamerCommand(`focus window ${entry.windowID} pid ${entry.pid}`);
-      await delay(400);
+      await delay(450); // Wait for the natural space switch animation
+      // Move via DesktopRenamer's backend
       await runDesktopRenamerCommand(`move window to space "${escapeAppleScriptString(targetId)}"`);
-      await delay(600);
+      await delay(600); // Wait for the backend's drag operation to complete
       // Switch back to the original (current) desktop.
       await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(targetId)}"`);
       await showToast({
@@ -137,11 +132,10 @@ export default function Command() {
         return;
       }
 
-      // Switch to the window's space, focus it, then move via backend.
-      await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(entry.space.id)}"`);
-      await delay(600);
+      // Focus the window (this naturally switches to its space)
       await runDesktopRenamerCommand(`focus window ${entry.windowID} pid ${entry.pid}`);
-      await delay(400);
+      await delay(450); // Wait for the natural space switch animation
+      // Move via DesktopRenamer's backend
       await runDesktopRenamerCommand(`move window to space "${escapeAppleScriptString(targetSpace.id)}"`);
       await showToast({
         style: Toast.Style.Success,
