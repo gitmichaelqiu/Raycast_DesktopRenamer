@@ -194,13 +194,12 @@ export default function Command() {
               ]}
               actions={
                 <ActionPanel>
-                  <ExecuteAction />
                   <Action 
                     title="Unstage Move" 
                     icon={Icon.XMarkCircle} 
-                    shortcut={{ modifiers: ["cmd"], key: "backspace" }} 
                     onAction={() => unstageMove(move.window.windowID)} 
                   />
+                  <ExecuteAction />
                 </ActionPanel>
               }
             />
@@ -223,7 +222,6 @@ export default function Command() {
                 accessories={[{ text: win.space.name, color: Color.SecondaryText }]}
                 actions={
                   <ActionPanel>
-                    {stagedWindowsArray.length > 0 && <ExecuteAction />}
                     <ActionPanel.Submenu title="Stage Move to Desktop…" icon={Icon.ArrowRight}>
                       {spaces
                         .filter((s) => s.id !== space.id)
@@ -236,6 +234,7 @@ export default function Command() {
                           />
                         ))}
                     </ActionPanel.Submenu>
+                    {stagedWindowsArray.length > 0 && <ExecuteAction />}
                   </ActionPanel>
                 }
               />
