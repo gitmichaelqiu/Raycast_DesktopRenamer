@@ -33,6 +33,22 @@ export async function handleDesktopRenamerError(error: unknown, errorMessage = "
           onAction: () => open("https://github.com/gitmichaelqiu/DesktopRenamer"),
         },
       });
+    } else if (error instanceof Error && error.message.includes("API Disabled")) {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "SpaceAPI Disabled",
+        message: "Enable SpaceAPI in DesktopRenamer settings.",
+        primaryAction: {
+          title: "Open DesktopRenamer",
+          onAction: async () => {
+            try {
+              await open("/Applications/DesktopRenamer.app");
+            } catch {
+              await showToast({ style: Toast.Style.Failure, title: "Failed to launch app" });
+            }
+          },
+        },
+      });
     } else {
       const message = error instanceof Error ? error.message : errorMessage;
       await showToast({
