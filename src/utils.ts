@@ -34,10 +34,11 @@ export async function handleDesktopRenamerError(error: unknown, errorMessage = "
         },
       });
     } else {
+      const message = error instanceof Error ? error.message : errorMessage;
       await showToast({
         style: Toast.Style.Failure,
         title: "Command Failed",
-        message: errorMessage,
+        message: message || errorMessage,
         primaryAction: {
           title: "Open DesktopRenamer",
           onAction: async () => {
