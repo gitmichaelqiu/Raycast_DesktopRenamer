@@ -106,7 +106,7 @@ export default function Command() {
       // Use the first current space (primary display).
       const targetId = currentIds[0];
       await runDesktopRenamerCommand(
-        `move specific window ${entry.windowID} to space "${escapeAppleScriptString(targetId)}"`,
+        `move specific window ${entry.windowID} from space "${escapeAppleScriptString(entry.space.id)}" to space "${escapeAppleScriptString(targetId)}"`,
       );
       await showToast({
         style: Toast.Style.Success,
@@ -121,7 +121,7 @@ export default function Command() {
   async function moveToDesktop(entry: WindowEntry, targetSpace: SpaceGroup) {
     try {
       await runDesktopRenamerCommand(
-        `move specific window ${entry.windowID} to space "${escapeAppleScriptString(targetSpace.id)}"`,
+        `move specific window ${entry.windowID} from space "${escapeAppleScriptString(entry.space.id)}" to space "${escapeAppleScriptString(targetSpace.id)}"`,
       );
       await showToast({
         style: Toast.Style.Success,
