@@ -11,4 +11,3 @@ export default async function Command() {
     // Error handled by utils
   }
 }
-

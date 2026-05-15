@@ -67,8 +67,7 @@ export default function Command() {
   const allWindows = data?.windows ?? [];
 
   // Apply filter
-  const filteredWindows =
-    filterSpaceId === "all" ? allWindows : allWindows.filter((w) => w.space.id === filterSpaceId);
+  const filteredWindows = filterSpaceId === "all" ? allWindows : allWindows.filter((w) => w.space.id === filterSpaceId);
 
   // Group windows by space ID, preserving space order.
   const windowsBySpace = new Map<string, WindowEntry[]>();
@@ -79,8 +78,7 @@ export default function Command() {
   }
 
   // Determine which spaces to show (filtered or all).
-  const visibleSpaces =
-    filterSpaceId === "all" ? allSpaces : allSpaces.filter((s) => s.id === filterSpaceId);
+  const visibleSpaces = filterSpaceId === "all" ? allSpaces : allSpaces.filter((s) => s.id === filterSpaceId);
 
   async function switchToWindow(entry: WindowEntry) {
     try {
@@ -147,7 +145,7 @@ export default function Command() {
       await delay(450); // Wait for the natural space switch animation
       // Move via DesktopRenamer's backend
       await runDesktopRenamerCommand(`move window to space "${escapeAppleScriptString(targetSpace.id)}"`);
-      
+
       if (originalSpaceId && originalSpaceId !== targetSpace.id) {
         await delay(600); // Wait for the backend's drag operation to complete
         await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(originalSpaceId)}"`);
@@ -175,11 +173,7 @@ export default function Command() {
           <List.Dropdown.Item title="All Desktops" value="all" />
           <List.Dropdown.Section title="Desktops">
             {allSpaces.map((space) => (
-              <List.Dropdown.Item
-                key={space.id}
-                title={space.name}
-                value={space.id}
-              />
+              <List.Dropdown.Item key={space.id} title={space.name} value={space.id} />
             ))}
           </List.Dropdown.Section>
         </List.Dropdown>
@@ -188,11 +182,7 @@ export default function Command() {
       {visibleSpaces.map((space) => {
         const windows = windowsBySpace.get(space.id) ?? [];
         return (
-          <List.Section
-            key={space.id}
-            title={space.name}
-            subtitle={`${space.displayID} · Space ${space.num}`}
-          >
+          <List.Section key={space.id} title={space.name} subtitle={`${space.displayID} · Space ${space.num}`}>
             {windows.length === 0 ? (
               <List.Item key={`empty-${space.id}`} title="No windows" icon={Icon.Minus} />
             ) : (
@@ -202,16 +192,10 @@ export default function Command() {
                   title={entry.title}
                   subtitle={entry.ownerName}
                   icon={entry.appPath ? { fileIcon: entry.appPath } : Icon.Window}
-                  accessories={[
-                    { tag: { value: entry.space.name, color: Color.SecondaryText } },
-                  ]}
+                  accessories={[{ tag: { value: entry.space.name, color: Color.SecondaryText } }]}
                   actions={
                     <ActionPanel>
-                      <Action
-                        title="Switch to Window"
-                        icon={Icon.Window}
-                        onAction={() => switchToWindow(entry)}
-                      />
+                      <Action title="Switch to Window" icon={Icon.Window} onAction={() => switchToWindow(entry)} />
                       <ActionPanel.Section title="Move Window">
                         <Action
                           title="Move to Current Desktop"

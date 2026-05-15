@@ -57,7 +57,9 @@ function delay(ms: number) {
 
 export default function Command() {
   const [isExecuting, setIsExecuting] = useState(false);
-  const [stagedMoves, setStagedMoves] = useState<Map<number, { window: WindowEntry; targetSpace: SpaceGroup }>>(new Map());
+  const [stagedMoves, setStagedMoves] = useState<Map<number, { window: WindowEntry; targetSpace: SpaceGroup }>>(
+    new Map(),
+  );
 
   const { data, isLoading } = usePromise(async () => {
     const result = await runDesktopRenamerScript(`
@@ -126,18 +128,18 @@ export default function Command() {
       let totalMoved = 0;
       for (const [sourceId, sourceMoves] of movesBySource.entries()) {
         toast.message = `Processing ${sourceMoves[0].window.space.name}...`;
-        
+
         // Switch to the source space once for all its windows
         await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(sourceId)}"`);
         await delay(600); // Give Mission Control time to settle
 
         for (const move of sourceMoves) {
           toast.message = `Moving ${move.window.title}...`;
-          
+
           // Focus the specific window (making it the active window in this space)
           await runDesktopRenamerCommand(`focus window ${move.window.windowID} pid ${move.window.pid}`);
-          await delay(250); 
-          
+          await delay(250);
+
           // Execute the backend move operation on the active window
           await runDesktopRenamerCommand(`move window to space "${escapeAppleScriptString(move.targetSpace.id)}"`);
           await delay(500); // Wait for the backend drag action
@@ -171,11 +173,11 @@ export default function Command() {
   }
 
   const ExecuteAction = () => (
-    <Action 
-      title="Confirm & Execute Batch Move" 
-      icon={Icon.Checkmark} 
-      shortcut={{ modifiers: ["cmd"], key: "return" }} 
-      onAction={executeBatchMove} 
+    <Action
+      title="Confirm & Execute Batch Move"
+      icon={Icon.Checkmark}
+      shortcut={{ modifiers: ["cmd"], key: "return" }}
+      onAction={executeBatchMove}
     />
   );
 
@@ -189,15 +191,13 @@ export default function Command() {
               title={move.window.title}
               subtitle={move.window.ownerName}
               icon={move.window.appPath ? { fileIcon: move.window.appPath } : Icon.Window}
-              accessories={[
-                { text: `→ ${move.targetSpace.name}`, color: Color.Green },
-              ]}
+              accessories={[{ text: `→ ${move.targetSpace.name}`, color: Color.Green }]}
               actions={
                 <ActionPanel>
-                  <Action 
-                    title="Unstage Move" 
-                    icon={Icon.XMarkCircle} 
-                    onAction={() => unstageMove(move.window.windowID)} 
+                  <Action
+                    title="Unstage Move"
+                    icon={Icon.XMarkCircle}
+                    onAction={() => unstageMove(move.window.windowID)}
                   />
                   <ExecuteAction />
                 </ActionPanel>

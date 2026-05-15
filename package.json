@@ -89,6 +89,7 @@
     {
       "name": "returnToOriginalSpace",
       "title": "Return to Original Space",
+      "label": "Enable automatic return",
       "description": "Automatically return to your original desktop after moving windows to a different desktop.",
       "type": "checkbox",
       "required": false,
