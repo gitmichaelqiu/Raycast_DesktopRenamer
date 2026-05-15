@@ -46,22 +46,19 @@
       "name": "toggle-active-label-window",
       "title": "Toggle Active Label Window",
       "description": "Toggle the Active Label Window.",
-      "mode": "no-view",
-      "interval": "1m"
+      "mode": "no-view"
     },
     {
       "name": "toggle-preview-label-window",
       "title": "Toggle Preview Label Window",
       "description": "Toggle the Preview Label Windows.",
-      "mode": "no-view",
-      "interval": "1m"
+      "mode": "no-view"
     },
     {
       "name": "toggle-active-label-window-visibility",
       "title": "Toggle Visible Label Window",
       "description": "Show/hide the Active Label Window from the desktop.",
-      "mode": "no-view",
-      "interval": "1m"
+      "mode": "no-view"
     },
     {
       "name": "list-windows",
