@@ -130,7 +130,7 @@ export default function Command() {
         return;
       }
 
-      const prefs = getPreferenceValues<{ returnToOriginalSpace: boolean }>();
+      const prefs = getPreferenceValues<Preferences>();
       let originalSpaceId: string | null = null;
       if (prefs.returnToOriginalSpace) {
         const currentIdsRaw = await runDesktopRenamerCommand("get current space id");
