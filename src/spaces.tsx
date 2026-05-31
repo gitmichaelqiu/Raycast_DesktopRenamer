@@ -7,6 +7,7 @@ export interface Space {
   name: string;
   displayID: string;
   num: number;
+  isFullscreen: boolean;
 }
 
 export function useSpaces() {
@@ -40,6 +41,7 @@ export function useSpaces() {
           name: parts[1] || "Unknown",
           displayID: parts[2] || "Main",
           num: parseInt(parts[3] || "0", 10),
+          isFullscreen: parts[4] === "1",
         };
       });
   }

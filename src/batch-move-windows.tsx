@@ -8,6 +8,7 @@ interface SpaceGroup {
   name: string;
   displayID: string;
   num: number;
+  isFullscreen: boolean;
 }
 
 interface WindowEntry {
@@ -32,6 +33,7 @@ function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEn
         name: parts[1] || "Unknown",
         displayID: parts[2] || "Display",
         num: parseInt(parts[3] || "0", 10),
+        isFullscreen: parts[4] === "1",
       };
       spaces.push(currentSpace);
     } else if (line.startsWith("  ") && currentSpace) {
@@ -222,7 +224,7 @@ export default function Command() {
                   <ActionPanel>
                     <ActionPanel.Submenu title="Stage Move to Desktop…" icon={Icon.ArrowRight}>
                       {spaces
-                        .filter((s) => s.id !== space.id)
+                        .filter((s) => s.id !== space.id && !s.isFullscreen)
                         .map((targetSpace) => (
                           <Action
                             key={targetSpace.id}

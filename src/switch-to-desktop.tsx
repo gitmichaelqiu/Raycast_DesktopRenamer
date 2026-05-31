@@ -45,12 +45,14 @@ export default function Command() {
                 actions={
                   <ActionPanel>
                     <Action title="Switch to Desktop" icon={Icon.Desktop} onAction={() => switchSpace(space)} />
-                    <Action
-                      title="Move Window"
-                      icon={Icon.Window}
-                      shortcut={{ modifiers: ["cmd"], key: "return" }}
-                      onAction={() => moveWindow(space)}
-                    />
+                    {!space.isFullscreen && (
+                      <Action
+                        title="Move Window"
+                        icon={Icon.Window}
+                        shortcut={{ modifiers: ["cmd"], key: "return" }}
+                        onAction={() => moveWindow(space)}
+                      />
+                    )}
                     <Action.Push
                       title="Rename Space"
                       shortcut={{ modifiers: ["cmd"], key: "r" }}

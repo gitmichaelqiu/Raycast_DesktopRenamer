@@ -17,36 +17,40 @@ export default function Command() {
 
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search desktops...">
-      {Object.entries(groupedSpaces).map(([displayID, spaces]) => (
-        <List.Section key={displayID} title={displayID}>
-          {spaces.map((space) => {
-            const isCurrent = space.name === currentName;
-            return (
-              <List.Item
-                key={space.id}
-                title={space.name}
-                subtitle={`Space ${space.num}`}
-                icon={{
-                  source: Icon.Window,
-                  tintColor: isCurrent ? Color.Blue : undefined,
-                }}
-                accessories={isCurrent ? [{ tag: { value: "Current", color: Color.Blue } }] : []}
-                actions={
-                  <ActionPanel>
-                    <Action title="Move Window" icon={Icon.Window} onAction={() => moveWindow(space)} />
-                    <Action.Push
-                      title="Rename Space"
-                      shortcut={{ modifiers: ["cmd"], key: "r" }}
-                      icon={Icon.Pencil}
-                      target={<RenameSpaceForm space={space} onRename={revalidate} />}
-                    />
-                  </ActionPanel>
-                }
-              />
-            );
-          })}
-        </List.Section>
-      ))}
+      {Object.entries(groupedSpaces).map(([displayID, spaces]) => {
+        const filtered = spaces.filter((s) => !s.isFullscreen);
+        if (filtered.length === 0) return null;
+        return (
+          <List.Section key={displayID} title={displayID}>
+            {filtered.map((space) => {
+              const isCurrent = space.name === currentName;
+              return (
+                <List.Item
+                  key={space.id}
+                  title={space.name}
+                  subtitle={`Space ${space.num}`}
+                  icon={{
+                    source: Icon.Window,
+                    tintColor: isCurrent ? Color.Blue : undefined,
+                  }}
+                  accessories={isCurrent ? [{ tag: { value: "Current", color: Color.Blue } }] : []}
+                  actions={
+                    <ActionPanel>
+                      <Action title="Move Window" icon={Icon.Window} onAction={() => moveWindow(space)} />
+                      <Action.Push
+                        title="Rename Space"
+                        shortcut={{ modifiers: ["cmd"], key: "r" }}
+                        icon={Icon.Pencil}
+                        target={<RenameSpaceForm space={space} onRename={revalidate} />}
+                      />
+                    </ActionPanel>
+                  }
+                />
+              );
+            })}
+          </List.Section>
+        );
+      })}
     </List>
   );
 }
