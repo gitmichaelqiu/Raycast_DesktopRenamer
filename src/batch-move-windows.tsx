@@ -136,7 +136,12 @@ export default function Command() {
         await delay(600); // Give Mission Control time to settle
 
         for (const move of sourceMoves) {
-          toast.message = `Moving ${move.window.title}...`;
+          const isFullscreen = move.window.space.isFullscreen;
+          if (isFullscreen) {
+            toast.message = `Un-fullscreening and moving ${move.window.title}...`;
+          } else {
+            toast.message = `Moving ${move.window.title}...`;
+          }
 
           // Focus the specific window (making it the active window in this space)
           await runDesktopRenamerCommand(`focus window ${move.window.windowID} pid ${move.window.pid}`);
@@ -144,7 +149,7 @@ export default function Command() {
 
           // Execute the backend move operation on the active window
           await runDesktopRenamerCommand(`move window to space "${escapeAppleScriptString(move.targetSpace.id)}"`);
-          await delay(500); // Wait for the backend drag action
+          await delay(isFullscreen ? 1700 : 500); // Wait for un-fullscreen (1.2s) + drag (0.5s)
           totalMoved++;
 
           // Since move window to space switches the system to the target space,

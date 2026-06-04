@@ -8,6 +8,7 @@ interface SpaceGroup {
   name: string;
   displayID: string;
   num: number;
+  isFullscreen: boolean;
 }
 
 interface WindowEntry {
@@ -32,6 +33,7 @@ function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEn
         name: parts[1] || "Unknown",
         displayID: parts[2] || "Display",
         num: parseInt(parts[3] || "0", 10),
+        isFullscreen: parts[4] === "1",
       };
       spaces.push(currentSpace);
     } else if (line.startsWith("  ") && currentSpace) {
@@ -110,7 +112,7 @@ export default function Command() {
       await delay(450); // Wait for the natural space switch animation
       // Move via DesktopRenamer's backend
       await runDesktopRenamerCommand(`move window to space "${escapeAppleScriptString(targetId)}"`);
-      await delay(600); // Wait for the backend's drag operation to complete
+      await delay(entry.space.isFullscreen ? 1750 : 600); // Wait for the backend's drag operation to complete
       // Switch back to the original (current) desktop.
       await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(targetId)}"`);
       await showToast({
@@ -147,8 +149,10 @@ export default function Command() {
       await runDesktopRenamerCommand(`move window to space "${escapeAppleScriptString(targetSpace.id)}"`);
 
       if (originalSpaceId && originalSpaceId !== targetSpace.id) {
-        await delay(600); // Wait for the backend's drag operation to complete
+        await delay(entry.space.isFullscreen ? 1750 : 600); // Wait for the backend's drag operation to complete
         await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(originalSpaceId)}"`);
+      } else if (entry.space.isFullscreen) {
+        await delay(1200); // Wait for un-fullscreen transition
       }
       await showToast({
         style: Toast.Style.Success,
@@ -209,7 +213,7 @@ export default function Command() {
                           shortcut={{ modifiers: ["cmd", "shift"], key: "m" }}
                         >
                           {allSpaces
-                            .filter((s) => s.id !== entry.space.id)
+                            .filter((s) => s.id !== entry.space.id && !s.isFullscreen)
                             .map((targetSpace) => (
                               <Action
                                 key={targetSpace.id}

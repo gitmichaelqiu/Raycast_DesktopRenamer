@@ -3,13 +3,26 @@ import { runDesktopRenamerCommand, escapeAppleScriptString } from "./utils";
 import { useSpaces, Space, RenameSpaceForm } from "./spaces";
 
 export default function Command() {
-  const { groupedSpaces, currentName, isLoading, revalidate } = useSpaces();
+  const { spaces, groupedSpaces, currentName, isLoading, revalidate } = useSpaces();
+  const currentSpace = spaces.find((s) => s.name === currentName);
 
   async function moveWindow(space: Space) {
     try {
       const sanitizedId = escapeAppleScriptString(space.id);
+      const isCurrentFullscreen = currentSpace?.isFullscreen;
+
+      if (isCurrentFullscreen) {
+        await showToast({ style: Toast.Style.Animated, title: "Un-fullscreening and moving window..." });
+      }
+
       await runDesktopRenamerCommand(`move window to space "${sanitizedId}"`);
+
+      if (isCurrentFullscreen) {
+        await new Promise((resolve) => setTimeout(resolve, 1700));
+      }
+
       await showToast({ style: Toast.Style.Success, title: `Moved window to ${space.name}` });
+      await revalidate();
     } catch {
       // Handled by utils
     }
