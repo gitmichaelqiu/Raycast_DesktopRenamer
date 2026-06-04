@@ -57,11 +57,36 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+interface StagedAction {
+  window: WindowEntry;
+  type: "move" | "close" | "minimize" | "hide" | "enterFullScreen" | "exitFullScreen" | "quit" | "restore";
+  targetSpace?: SpaceGroup;
+}
+
+function getActionLabel(type: string): string {
+  switch (type) {
+    case "close":
+      return "Close";
+    case "minimize":
+      return "Minimize";
+    case "hide":
+      return "Hide App";
+    case "enterFullScreen":
+      return "Enter Fullscreen";
+    case "exitFullScreen":
+      return "Exit Fullscreen";
+    case "quit":
+      return "Quit App";
+    case "restore":
+      return "Restore";
+    default:
+      return type;
+  }
+}
+
 export default function Command() {
   const [isExecuting, setIsExecuting] = useState(false);
-  const [stagedMoves, setStagedMoves] = useState<Map<number, { window: WindowEntry; targetSpace: SpaceGroup }>>(
-    new Map(),
-  );
+  const [stagedMoves, setStagedMoves] = useState<Map<number, StagedAction>>(new Map());
 
   const { data, isLoading } = usePromise(async () => {
     const result = await runDesktopRenamerScript(`
@@ -86,13 +111,17 @@ export default function Command() {
     windowsBySpace.set(w.space.id, list);
   }
 
-  function stageMove(window: WindowEntry, targetSpace: SpaceGroup) {
+  function stageAction(
+    window: WindowEntry,
+    type: "move" | "close" | "minimize" | "hide" | "enterFullScreen" | "exitFullScreen" | "quit" | "restore",
+    targetSpace?: SpaceGroup,
+  ) {
     const newStaged = new Map(stagedMoves);
-    newStaged.set(window.windowID, { window, targetSpace });
+    newStaged.set(window.windowID, { window, type, targetSpace });
     setStagedMoves(newStaged);
   }
 
-  function unstageMove(windowID: number) {
+  function unstageAction(windowID: number) {
     const newStaged = new Map(stagedMoves);
     newStaged.delete(windowID);
     setStagedMoves(newStaged);
@@ -100,12 +129,12 @@ export default function Command() {
 
   async function executeBatchMove() {
     if (stagedMoves.size === 0) {
-      await showToast({ style: Toast.Style.Failure, title: "No moves staged" });
+      await showToast({ style: Toast.Style.Failure, title: "No operations staged" });
       return;
     }
 
     setIsExecuting(true);
-    const toast = await showToast({ style: Toast.Style.Animated, title: "Executing batch move..." });
+    const toast = await showToast({ style: Toast.Style.Animated, title: "Executing batch operations..." });
 
     try {
       const prefs = getPreferenceValues<Preferences>();
@@ -119,42 +148,49 @@ export default function Command() {
       }
 
       // Group moves by the window's SOURCE space to minimize space switching.
-      // E.g., we go to Space A, move all targeted windows out, then go to Space B, etc.
-      const movesBySource = new Map<string, typeof stagedWindowsArray>();
-      for (const move of stagedWindowsArray) {
-        const list = movesBySource.get(move.window.space.id) ?? [];
-        list.push(move);
-        movesBySource.set(move.window.space.id, list);
+      const actionsBySource = new Map<string, StagedAction[]>();
+      for (const action of stagedWindowsArray) {
+        const list = actionsBySource.get(action.window.space.id) ?? [];
+        list.push(action);
+        actionsBySource.set(action.window.space.id, list);
       }
 
-      let totalMoved = 0;
-      for (const [sourceId, sourceMoves] of movesBySource.entries()) {
-        toast.message = `Processing ${sourceMoves[0].window.space.name}...`;
+      let totalExecuted = 0;
+      for (const [sourceId, sourceActions] of actionsBySource.entries()) {
+        toast.message = `Processing ${sourceActions[0].window.space.name}...`;
 
         // Switch to the source space once for all its windows
         await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(sourceId)}"`);
         await delay(600); // Give Mission Control time to settle
 
-        for (const move of sourceMoves) {
-          const isFullscreen = move.window.space.isFullscreen;
-          if (isFullscreen) {
-            toast.message = `Un-fullscreening and moving ${move.window.title}...`;
+        for (const action of sourceActions) {
+          if (action.type === "move" && action.targetSpace) {
+            const isFullscreen = action.window.space.isFullscreen;
+            if (isFullscreen) {
+              toast.message = `Un-fullscreening and moving ${action.window.title}...`;
+            } else {
+              toast.message = `Moving ${action.window.title}...`;
+            }
+
+            // Focus the specific window (making it the active window in this space)
+            await runDesktopRenamerCommand(`focus window ${action.window.windowID} pid ${action.window.pid}`);
+            await delay(250);
+
+            // Execute the backend move operation on the active window
+            await runDesktopRenamerCommand(`move window to space "${escapeAppleScriptString(action.targetSpace.id)}"`);
+            await delay(isFullscreen ? 1700 : 500); // Wait for un-fullscreen (1.2s) + drag (0.5s)
           } else {
-            toast.message = `Moving ${move.window.title}...`;
+            toast.message = `Executing ${action.type} on ${action.window.title}...`;
+            await runDesktopRenamerCommand(
+              `execute window action "${action.window.windowID}" pid "${action.window.pid}" action "${action.type}"`,
+            );
+            await delay(400);
           }
-
-          // Focus the specific window (making it the active window in this space)
-          await runDesktopRenamerCommand(`focus window ${move.window.windowID} pid ${move.window.pid}`);
-          await delay(250);
-
-          // Execute the backend move operation on the active window
-          await runDesktopRenamerCommand(`move window to space "${escapeAppleScriptString(move.targetSpace.id)}"`);
-          await delay(isFullscreen ? 1700 : 500); // Wait for un-fullscreen (1.2s) + drag (0.5s)
-          totalMoved++;
+          totalExecuted++;
 
           // Since move window to space switches the system to the target space,
           // we must switch BACK to our current source space to process the next window in this group.
-          if (sourceMoves.indexOf(move) < sourceMoves.length - 1) {
+          if (action.type === "move" && sourceActions.indexOf(action) < sourceActions.length - 1) {
             await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(sourceId)}"`);
             await delay(600);
           }
@@ -169,7 +205,7 @@ export default function Command() {
       }
 
       toast.style = Toast.Style.Success;
-      toast.title = `Successfully moved ${totalMoved} window${totalMoved === 1 ? "" : "s"}`;
+      toast.title = `Successfully completed ${totalExecuted} operation${totalExecuted === 1 ? "" : "s"}`;
       await popToRoot();
     } catch {
       await toast.hide();
@@ -179,7 +215,7 @@ export default function Command() {
 
   const ExecuteAction = () => (
     <Action
-      title="Confirm & Execute Batch Move"
+      title="Confirm & Execute Batch Operations"
       icon={Icon.Checkmark}
       shortcut={{ modifiers: ["cmd"], key: "return" }}
       onAction={executeBatchMove}
@@ -189,20 +225,30 @@ export default function Command() {
   return (
     <List isLoading={isLoading || isExecuting} searchBarPlaceholder="Search windows...">
       {stagedWindowsArray.length > 0 && (
-        <List.Section title="Staged Moves (Pending)" subtitle={`${stagedWindowsArray.length} items`}>
-          {stagedWindowsArray.map((move) => (
+        <List.Section title="Staged Actions (Pending)" subtitle={`${stagedWindowsArray.length} items`}>
+          {stagedWindowsArray.map((action) => (
             <List.Item
-              key={`staged_${move.window.windowID}`}
-              title={move.window.title}
-              subtitle={move.window.ownerName}
-              icon={move.window.appPath ? { fileIcon: move.window.appPath } : Icon.Window}
-              accessories={[{ tag: { value: `→ ${move.targetSpace.name}`, color: Color.Green } }]}
+              key={`staged_${action.window.windowID}`}
+              title={action.window.title}
+              subtitle={action.window.ownerName}
+              icon={action.window.appPath ? { fileIcon: action.window.appPath } : Icon.Window}
+              accessories={[
+                {
+                  tag: {
+                    value:
+                      action.type === "move" && action.targetSpace
+                        ? `→ ${action.targetSpace.name}`
+                        : `→ ${getActionLabel(action.type)}`,
+                    color: action.type === "move" ? Color.Green : Color.Orange,
+                  },
+                },
+              ]}
               actions={
                 <ActionPanel>
                   <Action
-                    title="Unstage Move"
+                    title="Unstage Action"
                     icon={Icon.XMarkCircle}
-                    onAction={() => unstageMove(move.window.windowID)}
+                    onAction={() => unstageAction(action.window.windowID)}
                   />
                   <ExecuteAction />
                 </ActionPanel>
@@ -235,10 +281,48 @@ export default function Command() {
                             key={targetSpace.id}
                             title={targetSpace.name}
                             icon={Icon.Desktop}
-                            onAction={() => stageMove(win, targetSpace)}
+                            onAction={() => stageAction(win, "move", targetSpace)}
                           />
                         ))}
                     </ActionPanel.Submenu>
+                    <ActionPanel.Section title="Stage Actions">
+                      <Action
+                        title="Stage Close"
+                        icon={Icon.XMarkCircle}
+                        shortcut={{ modifiers: ["cmd", "shift"], key: "w" }}
+                        onAction={() => stageAction(win, "close")}
+                      />
+                      <Action
+                        title="Stage Minimize"
+                        icon={Icon.Minus}
+                        shortcut={{ modifiers: ["cmd", "shift"], key: "n" }}
+                        onAction={() => stageAction(win, "minimize")}
+                      />
+                      <Action
+                        title="Stage Restore"
+                        icon={Icon.ArrowUp}
+                        shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
+                        onAction={() => stageAction(win, "restore")}
+                      />
+                      <Action
+                        title="Stage Toggle Fullscreen"
+                        icon={Icon.Maximize}
+                        shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
+                        onAction={() => stageAction(win, win.space.isFullscreen ? "exitFullScreen" : "enterFullScreen")}
+                      />
+                      <Action
+                        title="Stage Hide"
+                        icon={Icon.EyeDisabled}
+                        shortcut={{ modifiers: ["cmd", "shift"], key: "h" }}
+                        onAction={() => stageAction(win, "hide")}
+                      />
+                      <Action
+                        title="Stage Quit"
+                        icon={Icon.Trash}
+                        shortcut={{ modifiers: ["cmd", "shift"], key: "q" }}
+                        onAction={() => stageAction(win, "quit")}
+                      />
+                    </ActionPanel.Section>
                     {stagedWindowsArray.length > 0 && <ExecuteAction />}
                   </ActionPanel>
                 }

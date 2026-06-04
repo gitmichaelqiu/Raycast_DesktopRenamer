@@ -164,6 +164,18 @@ export default function Command() {
     }
   }
 
+  async function handleWindowAction(entry: WindowEntry, action: string) {
+    try {
+      const toast = await showToast({ style: Toast.Style.Animated, title: `Executing action: ${action}...` });
+      await runDesktopRenamerCommand(`execute window action "${entry.windowID}" pid "${entry.pid}" action "${action}"`);
+      toast.style = Toast.Style.Success;
+      toast.title = `Executed ${action}`;
+      revalidate();
+    } catch {
+      // Error handled by utils
+    }
+  }
+
   function delay(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
@@ -222,6 +234,46 @@ export default function Command() {
                               />
                             ))}
                         </ActionPanel.Submenu>
+                      </ActionPanel.Section>
+                      <ActionPanel.Section title="Window Actions">
+                        <Action
+                          title="Close Window"
+                          icon={Icon.XMarkCircle}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "w" }}
+                          onAction={() => handleWindowAction(entry, "close")}
+                        />
+                        <Action
+                          title="Minimize Window"
+                          icon={Icon.Minus}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "n" }}
+                          onAction={() => handleWindowAction(entry, "minimize")}
+                        />
+                        <Action
+                          title="Restore Window"
+                          icon={Icon.ArrowUp}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
+                          onAction={() => handleWindowAction(entry, "restore")}
+                        />
+                        <Action
+                          title="Toggle Fullscreen"
+                          icon={Icon.Maximize}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
+                          onAction={() =>
+                            handleWindowAction(entry, entry.space.isFullscreen ? "exitFullScreen" : "enterFullScreen")
+                          }
+                        />
+                        <Action
+                          title="Hide Application"
+                          icon={Icon.EyeDisabled}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "h" }}
+                          onAction={() => handleWindowAction(entry, "hide")}
+                        />
+                        <Action
+                          title="Quit Application"
+                          icon={Icon.Trash}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "q" }}
+                          onAction={() => handleWindowAction(entry, "quit")}
+                        />
                       </ActionPanel.Section>
                     </ActionPanel>
                   }
