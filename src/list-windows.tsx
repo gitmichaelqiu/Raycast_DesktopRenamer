@@ -195,14 +195,13 @@ export default function Command() {
         </List.Dropdown>
       }
     >
-      {visibleSpaces.map((space) => {
-        const windows = windowsBySpace.get(space.id) ?? [];
-        return (
-          <List.Section key={space.id} title={space.name} subtitle={`${space.displayID} · Space ${space.num}`}>
-            {windows.length === 0 ? (
-              <List.Item key={`empty-${space.id}`} title="No windows" icon={Icon.Minus} />
-            ) : (
-              windows.map((entry) => (
+      {visibleSpaces
+        .filter((space) => (windowsBySpace.get(space.id) ?? []).length > 0)
+        .map((space) => {
+          const windows = windowsBySpace.get(space.id) ?? [];
+          return (
+            <List.Section key={space.id} title={space.name} subtitle={`${space.displayID} · Space ${space.num}`}>
+              {windows.map((entry) => (
                 <List.Item
                   key={`${entry.windowID}`}
                   title={entry.title}
@@ -278,11 +277,10 @@ export default function Command() {
                     </ActionPanel>
                   }
                 />
-              ))
-            )}
-          </List.Section>
-        );
-      })}
+              ))}
+            </List.Section>
+          );
+        })}
     </List>
   );
 }
