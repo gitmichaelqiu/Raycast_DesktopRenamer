@@ -72,9 +72,9 @@ function getActionLabel(type: string): string {
     case "hide":
       return "Hide App";
     case "enterFullScreen":
-      return "Enter Fullscreen";
+      return "Enter Full Screen";
     case "exitFullScreen":
-      return "Exit Fullscreen";
+      return "Exit Full Screen";
     case "quit":
       return "Quit App";
     case "restore":
@@ -305,7 +305,7 @@ export default function Command() {
                         onAction={() => stageAction(win, "restore")}
                       />
                       <Action
-                        title="Stage Toggle Fullscreen"
+                        title={win.space.isFullscreen ? "Stage Exit Full Screen" : "Stage Enter Full Screen"}
                         icon={Icon.Maximize}
                         shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
                         onAction={() => stageAction(win, win.space.isFullscreen ? "exitFullScreen" : "enterFullScreen")}

@@ -255,7 +255,7 @@ export default function Command() {
                           onAction={() => handleWindowAction(entry, "restore")}
                         />
                         <Action
-                          title="Toggle Fullscreen"
+                          title={entry.space.isFullscreen ? "Exit Full Screen" : "Enter Full Screen"}
                           icon={Icon.Maximize}
                           shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
                           onAction={() =>
