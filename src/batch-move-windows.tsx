@@ -290,7 +290,6 @@ export default function Command() {
                 accessories={[
                   ...(win.isMinimized ? [{ tag: { value: "Minimized", color: Color.Orange } }] : []),
                   ...(win.isHidden ? [{ tag: { value: "Hidden", color: Color.Magenta } }] : []),
-                  { tag: { value: win.space.name, color: Color.SecondaryText } },
                 ]}
                 actions={
                   <ActionPanel>
