@@ -313,12 +313,14 @@ export default function Command() {
                         shortcut={{ modifiers: ["cmd", "shift"], key: "w" }}
                         onAction={() => stageAction(win, "close")}
                       />
-                      <Action
-                        title="Stage Minimize"
-                        icon={Icon.Minus}
-                        shortcut={{ modifiers: ["cmd", "shift"], key: "n" }}
-                        onAction={() => stageAction(win, "minimize")}
-                      />
+                      {!win.isMinimized && (
+                        <Action
+                          title="Stage Minimize"
+                          icon={Icon.Minus}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "n" }}
+                          onAction={() => stageAction(win, "minimize")}
+                        />
+                      )}
                       <Action
                         title="Stage Restore"
                         icon={Icon.ArrowUp}
@@ -331,12 +333,14 @@ export default function Command() {
                         shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
                         onAction={() => stageAction(win, win.space.isFullscreen ? "exitFullScreen" : "enterFullScreen")}
                       />
-                      <Action
-                        title="Stage Hide"
-                        icon={Icon.EyeDisabled}
-                        shortcut={{ modifiers: ["cmd", "shift"], key: "h" }}
-                        onAction={() => stageAction(win, "hide")}
-                      />
+                      {!win.isHidden && (
+                        <Action
+                          title="Stage Hide"
+                          icon={Icon.EyeDisabled}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "h" }}
+                          onAction={() => stageAction(win, "hide")}
+                        />
+                      )}
                       <Action
                         title="Stage Quit"
                         icon={Icon.Trash}
