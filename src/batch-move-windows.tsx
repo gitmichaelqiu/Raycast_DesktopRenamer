@@ -321,12 +321,14 @@ export default function Command() {
                           onAction={() => stageAction(win, "minimize")}
                         />
                       )}
-                      <Action
-                        title="Stage Restore"
-                        icon={Icon.ArrowUp}
-                        shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
-                        onAction={() => stageAction(win, "restore")}
-                      />
+                      {(win.isMinimized || win.isHidden) && (
+                        <Action
+                          title="Stage Restore"
+                          icon={Icon.ArrowUp}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
+                          onAction={() => stageAction(win, "restore")}
+                        />
+                      )}
                       <Action
                         title={win.space.isFullscreen ? "Stage Exit Full Screen" : "Stage Enter Full Screen"}
                         icon={Icon.Maximize}

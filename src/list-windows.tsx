@@ -269,12 +269,14 @@ export default function Command() {
                             onAction={() => handleWindowAction(entry, "minimize")}
                           />
                         )}
-                        <Action
-                          title="Restore Window"
-                          icon={Icon.ArrowUp}
-                          shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
-                          onAction={() => handleWindowAction(entry, "restore")}
-                        />
+                        {(entry.isMinimized || entry.isHidden) && (
+                          <Action
+                            title="Restore Window"
+                            icon={Icon.ArrowUp}
+                            shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
+                            onAction={() => handleWindowAction(entry, "restore")}
+                          />
+                        )}
                         <Action
                           title={entry.space.isFullscreen ? "Exit Full Screen" : "Enter Full Screen"}
                           icon={Icon.Maximize}
