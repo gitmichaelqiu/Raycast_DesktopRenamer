@@ -18,6 +18,8 @@ interface WindowEntry {
   appPath: string;
   title: string;
   space: SpaceGroup;
+  isMinimized: boolean;
+  isHidden: boolean;
 }
 
 function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEntry[] } {
@@ -38,13 +40,28 @@ function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEn
       spaces.push(currentSpace);
     } else if (line.startsWith("  ") && currentSpace) {
       const parts = line.trim().split("|");
-      if (parts.length >= 5) {
+      if (parts.length >= 7) {
+        // New format: wid|pid|owner|appPath|title|isMinimized|isHidden
+        windows.push({
+          windowID: parseInt(parts[0], 10),
+          pid: parseInt(parts[1], 10),
+          ownerName: parts[2],
+          appPath: parts[3],
+          title: parts.slice(4, parts.length - 2).join("|"),
+          isMinimized: parts[parts.length - 2] === "1",
+          isHidden: parts[parts.length - 1] === "1",
+          space: { ...currentSpace },
+        });
+      } else if (parts.length >= 5) {
+        // Legacy format: wid|pid|owner|appPath|title
         windows.push({
           windowID: parseInt(parts[0], 10),
           pid: parseInt(parts[1], 10),
           ownerName: parts[2],
           appPath: parts[3],
           title: parts.slice(4).join("|"),
+          isMinimized: false,
+          isHidden: false,
           space: { ...currentSpace },
         });
       }
@@ -207,7 +224,11 @@ export default function Command() {
                   title={entry.title}
                   subtitle={entry.ownerName}
                   icon={entry.appPath ? { fileIcon: entry.appPath } : Icon.Window}
-                  accessories={[{ tag: { value: entry.space.name, color: Color.SecondaryText } }]}
+                  accessories={[
+                    ...(entry.isMinimized ? [{ tag: { value: "Minimized", color: Color.Orange } }] : []),
+                    ...(entry.isHidden ? [{ tag: { value: "Hidden", color: Color.Magenta } }] : []),
+                    { tag: { value: entry.space.name, color: Color.SecondaryText } },
+                  ]}
                   actions={
                     <ActionPanel>
                       <Action title="Switch to Window" icon={Icon.Window} onAction={() => switchToWindow(entry)} />
