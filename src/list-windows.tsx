@@ -261,12 +261,14 @@ export default function Command() {
                           shortcut={{ modifiers: ["cmd", "shift"], key: "w" }}
                           onAction={() => handleWindowAction(entry, "close")}
                         />
-                        <Action
-                          title="Minimize Window"
-                          icon={Icon.Minus}
-                          shortcut={{ modifiers: ["cmd", "shift"], key: "n" }}
-                          onAction={() => handleWindowAction(entry, "minimize")}
-                        />
+                        {!entry.isMinimized && (
+                          <Action
+                            title="Minimize Window"
+                            icon={Icon.Minus}
+                            shortcut={{ modifiers: ["cmd", "shift"], key: "n" }}
+                            onAction={() => handleWindowAction(entry, "minimize")}
+                          />
+                        )}
                         <Action
                           title="Restore Window"
                           icon={Icon.ArrowUp}
@@ -281,12 +283,14 @@ export default function Command() {
                             handleWindowAction(entry, entry.space.isFullscreen ? "exitFullScreen" : "enterFullScreen")
                           }
                         />
-                        <Action
-                          title="Hide Application"
-                          icon={Icon.EyeDisabled}
-                          shortcut={{ modifiers: ["cmd", "shift"], key: "h" }}
-                          onAction={() => handleWindowAction(entry, "hide")}
-                        />
+                        {!entry.isHidden && (
+                          <Action
+                            title="Hide Application"
+                            icon={Icon.EyeDisabled}
+                            shortcut={{ modifiers: ["cmd", "shift"], key: "h" }}
+                            onAction={() => handleWindowAction(entry, "hide")}
+                          />
+                        )}
                         <Action
                           title="Quit Application"
                           icon={Icon.Trash}
