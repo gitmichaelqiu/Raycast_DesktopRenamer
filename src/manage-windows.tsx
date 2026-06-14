@@ -257,8 +257,7 @@ export default function Command() {
                     color: action.type === "move" ? Color.Green : Color.Orange,
                   },
                 },
-                ...(action.window.isMinimized ? [{ tag: { value: "Minimized", color: Color.Orange } }] : []),
-                ...(action.window.isHidden ? [{ tag: { value: "Hidden", color: Color.Magenta } }] : []),
+                ...(action.window.space.isFullscreen ? [{ tag: { value: "Full Screen", color: Color.Blue } }] : []),
               ]}
               actions={
                 <ActionPanel>
@@ -290,6 +289,7 @@ export default function Command() {
                 accessories={[
                   ...(win.isMinimized ? [{ tag: { value: "Minimized", color: Color.Orange } }] : []),
                   ...(win.isHidden ? [{ tag: { value: "Hidden", color: Color.Magenta } }] : []),
+                  ...(win.space.isFullscreen ? [{ tag: { value: "Full Screen", color: Color.Blue } }] : []),
                 ]}
                 actions={
                   <ActionPanel>

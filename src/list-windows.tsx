@@ -227,6 +227,7 @@ export default function Command() {
                   accessories={[
                     ...(entry.isMinimized ? [{ tag: { value: "Minimized", color: Color.Orange } }] : []),
                     ...(entry.isHidden ? [{ tag: { value: "Hidden", color: Color.Magenta } }] : []),
+                    ...(entry.space.isFullscreen ? [{ tag: { value: "Full Screen", color: Color.Blue } }] : []),
                   ]}
                   actions={
                     <ActionPanel>
