@@ -18,6 +18,8 @@ interface WindowEntry {
   appPath: string;
   title: string;
   space: SpaceGroup;
+  isMinimized: boolean;
+  isHidden: boolean;
 }
 
 function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEntry[] } {
@@ -38,13 +40,26 @@ function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEn
       spaces.push(currentSpace);
     } else if (line.startsWith("  ") && currentSpace) {
       const parts = line.trim().split("|");
-      if (parts.length >= 5) {
+      if (parts.length >= 7) {
+        windows.push({
+          windowID: parseInt(parts[0], 10),
+          pid: parseInt(parts[1], 10),
+          ownerName: parts[2],
+          appPath: parts[3],
+          title: parts.slice(4, parts.length - 2).join("|"),
+          isMinimized: parts[parts.length - 2] === "1",
+          isHidden: parts[parts.length - 1] === "1",
+          space: { ...currentSpace },
+        });
+      } else if (parts.length >= 5) {
         windows.push({
           windowID: parseInt(parts[0], 10),
           pid: parseInt(parts[1], 10),
           ownerName: parts[2],
           appPath: parts[3],
           title: parts.slice(4).join("|"),
+          isMinimized: false,
+          isHidden: false,
           space: { ...currentSpace },
         });
       }
@@ -242,6 +257,8 @@ export default function Command() {
                     color: action.type === "move" ? Color.Green : Color.Orange,
                   },
                 },
+                ...(action.window.isMinimized ? [{ tag: { value: "Minimized", color: Color.Orange } }] : []),
+                ...(action.window.isHidden ? [{ tag: { value: "Hidden", color: Color.Magenta } }] : []),
               ]}
               actions={
                 <ActionPanel>
@@ -270,7 +287,11 @@ export default function Command() {
                 title={win.title}
                 subtitle={win.ownerName}
                 icon={win.appPath ? { fileIcon: win.appPath } : Icon.Window}
-                accessories={[{ tag: { value: win.space.name, color: Color.SecondaryText } }]}
+                accessories={[
+                  ...(win.isMinimized ? [{ tag: { value: "Minimized", color: Color.Orange } }] : []),
+                  ...(win.isHidden ? [{ tag: { value: "Hidden", color: Color.Magenta } }] : []),
+                  { tag: { value: win.space.name, color: Color.SecondaryText } },
+                ]}
                 actions={
                   <ActionPanel>
                     <ActionPanel.Submenu title="Stage Move to Desktop…" icon={Icon.ArrowRight}>
