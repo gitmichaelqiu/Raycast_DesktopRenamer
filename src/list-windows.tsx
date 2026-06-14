@@ -74,12 +74,16 @@ export default function Command() {
   const [filterSpaceId, setFilterSpaceId] = useState("all");
 
   const { data, isLoading, revalidate } = usePromise(async () => {
-    const result = await runDesktopRenamerScript(`
-      tell application "DesktopRenamer"
-        get windows
-      end tell
-    `);
-    return parseWindowData(result);
+    try {
+      const result = await runDesktopRenamerScript(`
+        tell application "DesktopRenamer"
+          get windows
+        end tell
+      `);
+      return parseWindowData(result);
+    } catch {
+      return { spaces: [], windows: [] };
+    }
   });
 
   const allSpaces = data?.spaces ?? [];

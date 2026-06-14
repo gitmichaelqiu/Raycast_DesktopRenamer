@@ -104,12 +104,16 @@ export default function Command() {
   const [stagedMoves, setStagedMoves] = useState<Map<number, StagedAction>>(new Map());
 
   const { data, isLoading } = usePromise(async () => {
-    const result = await runDesktopRenamerScript(`
-      tell application "DesktopRenamer"
-        get windows
-      end tell
-    `);
-    return parseWindowData(result);
+    try {
+      const result = await runDesktopRenamerScript(`
+        tell application "DesktopRenamer"
+          get windows
+        end tell
+      `);
+      return parseWindowData(result);
+    } catch {
+      return { spaces: [], windows: [] };
+    }
   });
 
   const spaces = data?.spaces ?? [];
@@ -222,8 +226,10 @@ export default function Command() {
       toast.style = Toast.Style.Success;
       toast.title = `Successfully completed ${totalExecuted} operation${totalExecuted === 1 ? "" : "s"}`;
       await popToRoot();
-    } catch {
-      await toast.hide();
+    } catch (error) {
+      toast.style = Toast.Style.Failure;
+      toast.title = "Batch operation failed";
+      toast.message = error instanceof Error ? error.message : undefined;
       setIsExecuting(false);
     }
   }
