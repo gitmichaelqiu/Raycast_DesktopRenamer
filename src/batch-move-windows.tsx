@@ -285,6 +285,7 @@ export default function Command() {
                           />
                         ))}
                     </ActionPanel.Submenu>
+                    <ExecuteAction />
                     <ActionPanel.Section title="Stage Actions">
                       <Action
                         title="Stage Close"
@@ -323,7 +324,6 @@ export default function Command() {
                         onAction={() => stageAction(win, "quit")}
                       />
                     </ActionPanel.Section>
-                    {stagedWindowsArray.length > 0 && <ExecuteAction />}
                   </ActionPanel>
                 }
               />
