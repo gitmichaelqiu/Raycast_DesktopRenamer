@@ -235,13 +235,13 @@ export default function Command() {
                         <Action
                           title="Move to Current Desktop"
                           icon={Icon.ArrowRight}
-                          shortcut={{ modifiers: ["cmd"], key: "m" }}
+                          shortcut={{ modifiers: ["cmd"], key: "t" }}
                           onAction={() => moveToCurrentDesktop(entry)}
                         />
                         <ActionPanel.Submenu
                           title="Move to Desktop…"
                           icon={Icon.List}
-                          shortcut={{ modifiers: ["cmd", "shift"], key: "m" }}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "t" }}
                         >
                           {allSpaces
                             .filter((s) => s.id !== entry.space.id && !s.isFullscreen)
@@ -265,7 +265,7 @@ export default function Command() {
                           <Action
                             title="Minimize Window"
                             icon={Icon.Minus}
-                            shortcut={{ modifiers: ["cmd", "shift"], key: "n" }}
+                            shortcut={{ modifiers: ["cmd", "shift"], key: "m" }}
                             onAction={() => handleWindowAction(entry, "minimize")}
                           />
                         )}

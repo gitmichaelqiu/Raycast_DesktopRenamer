@@ -317,7 +317,7 @@ export default function Command() {
                         <Action
                           title="Minimize"
                           icon={Icon.Minus}
-                          shortcut={{ modifiers: ["cmd", "shift"], key: "n" }}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "m" }}
                           onAction={() => stageAction(win, "minimize")}
                         />
                       )}
