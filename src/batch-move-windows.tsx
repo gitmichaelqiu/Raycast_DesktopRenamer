@@ -308,14 +308,14 @@ export default function Command() {
                     <ExecuteAction />
                     <ActionPanel.Section title="Stage Actions">
                       <Action
-                        title="Stage Close"
+                        title="Close"
                         icon={Icon.XMarkCircle}
                         shortcut={{ modifiers: ["cmd", "shift"], key: "w" }}
                         onAction={() => stageAction(win, "close")}
                       />
                       {!win.isMinimized && (
                         <Action
-                          title="Stage Minimize"
+                          title="Minimize"
                           icon={Icon.Minus}
                           shortcut={{ modifiers: ["cmd", "shift"], key: "n" }}
                           onAction={() => stageAction(win, "minimize")}
@@ -323,28 +323,28 @@ export default function Command() {
                       )}
                       {(win.isMinimized || win.isHidden) && (
                         <Action
-                          title="Stage Restore"
+                          title="Restore"
                           icon={Icon.ArrowUp}
                           shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
                           onAction={() => stageAction(win, "restore")}
                         />
                       )}
                       <Action
-                        title={win.space.isFullscreen ? "Stage Exit Full Screen" : "Stage Enter Full Screen"}
+                        title={win.space.isFullscreen ? "Exit Full Screen" : "Enter Full Screen"}
                         icon={Icon.Maximize}
                         shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
                         onAction={() => stageAction(win, win.space.isFullscreen ? "exitFullScreen" : "enterFullScreen")}
                       />
                       {!win.isHidden && (
                         <Action
-                          title="Stage Hide"
+                          title="Hide"
                           icon={Icon.EyeDisabled}
                           shortcut={{ modifiers: ["cmd", "shift"], key: "h" }}
                           onAction={() => stageAction(win, "hide")}
                         />
                       )}
                       <Action
-                        title="Stage Quit"
+                        title="Quit"
                         icon={Icon.Trash}
                         shortcut={{ modifiers: ["cmd", "shift"], key: "q" }}
                         onAction={() => stageAction(win, "quit")}
