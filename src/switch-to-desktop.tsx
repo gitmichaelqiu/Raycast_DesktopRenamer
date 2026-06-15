@@ -58,7 +58,7 @@ export default function Command() {
                     <Action title="Switch to Desktop" icon={Icon.Desktop} onAction={() => switchSpace(space)} />
                     {!space.isFullscreen && (
                       <Action
-                        title="Move Window"
+                        title="Move Window to Desktop"
                         icon={Icon.Window}
                         shortcut={{ modifiers: ["cmd"], key: "return" }}
                         onAction={() => moveWindow(space)}
