@@ -318,14 +318,6 @@ export default function Command() {
                         shortcut={{ modifiers: ["cmd", "shift"], key: "w" }}
                         onAction={() => stageAction(win, "close")}
                       />
-                      {!win.isMinimized && (
-                        <Action
-                          title="Minimize"
-                          icon={Icon.Minus}
-                          shortcut={{ modifiers: ["cmd", "shift"], key: "m" }}
-                          onAction={() => stageAction(win, "minimize")}
-                        />
-                      )}
                       {(win.isMinimized || win.isHidden) && (
                         <Action
                           title="Restore"
@@ -334,12 +326,14 @@ export default function Command() {
                           onAction={() => stageAction(win, "restore")}
                         />
                       )}
-                      <Action
-                        title={win.space.isFullscreen ? "Exit Full Screen" : "Enter Full Screen"}
-                        icon={Icon.Maximize}
-                        shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
-                        onAction={() => stageAction(win, win.space.isFullscreen ? "exitFullScreen" : "enterFullScreen")}
-                      />
+                      {!win.isMinimized && (
+                        <Action
+                          title="Minimize"
+                          icon={Icon.Minus}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "m" }}
+                          onAction={() => stageAction(win, "minimize")}
+                        />
+                      )}
                       {!win.isHidden && (
                         <Action
                           title="Hide"
@@ -348,6 +342,12 @@ export default function Command() {
                           onAction={() => stageAction(win, "hide")}
                         />
                       )}
+                      <Action
+                        title={win.space.isFullscreen ? "Exit Full Screen" : "Enter Full Screen"}
+                        icon={Icon.Maximize}
+                        shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
+                        onAction={() => stageAction(win, win.space.isFullscreen ? "exitFullScreen" : "enterFullScreen")}
+                      />
                       <Action
                         title="Quit"
                         icon={Icon.Trash}

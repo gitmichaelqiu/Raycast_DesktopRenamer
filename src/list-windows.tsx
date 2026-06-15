@@ -266,6 +266,14 @@ export default function Command() {
                           shortcut={{ modifiers: ["cmd", "shift"], key: "w" }}
                           onAction={() => handleWindowAction(entry, "close")}
                         />
+                        {(entry.isMinimized || entry.isHidden) && (
+                          <Action
+                            title="Restore Window"
+                            icon={Icon.ArrowUp}
+                            shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
+                            onAction={() => handleWindowAction(entry, "restore")}
+                          />
+                        )}
                         {!entry.isMinimized && (
                           <Action
                             title="Minimize Window"
@@ -274,12 +282,12 @@ export default function Command() {
                             onAction={() => handleWindowAction(entry, "minimize")}
                           />
                         )}
-                        {(entry.isMinimized || entry.isHidden) && (
+                        {!entry.isHidden && (
                           <Action
-                            title="Restore Window"
-                            icon={Icon.ArrowUp}
-                            shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
-                            onAction={() => handleWindowAction(entry, "restore")}
+                            title="Hide Application"
+                            icon={Icon.EyeDisabled}
+                            shortcut={{ modifiers: ["cmd", "shift"], key: "h" }}
+                            onAction={() => handleWindowAction(entry, "hide")}
                           />
                         )}
                         <Action
@@ -290,14 +298,6 @@ export default function Command() {
                             handleWindowAction(entry, entry.space.isFullscreen ? "exitFullScreen" : "enterFullScreen")
                           }
                         />
-                        {!entry.isHidden && (
-                          <Action
-                            title="Hide Application"
-                            icon={Icon.EyeDisabled}
-                            shortcut={{ modifiers: ["cmd", "shift"], key: "h" }}
-                            onAction={() => handleWindowAction(entry, "hide")}
-                          />
-                        )}
                         <Action
                           title="Quit Application"
                           icon={Icon.Trash}
