@@ -64,12 +64,14 @@ export default function Command() {
                         onAction={() => moveWindow(space)}
                       />
                     )}
-                    <Action.Push
-                      title="Rename Space"
-                      shortcut={{ modifiers: ["cmd"], key: "r" }}
-                      icon={Icon.Pencil}
-                      target={<RenameSpaceForm space={space} onRename={revalidate} />}
-                    />
+                    {!space.isFullscreen && (
+                      <Action.Push
+                        title="Rename Space"
+                        shortcut={{ modifiers: ["cmd"], key: "r" }}
+                        icon={Icon.Pencil}
+                        target={<RenameSpaceForm space={space} onRename={revalidate} />}
+                      />
+                    )}
                   </ActionPanel>
                 }
               />
