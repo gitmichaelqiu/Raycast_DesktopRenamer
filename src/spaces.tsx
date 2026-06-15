@@ -8,6 +8,7 @@ export interface Space {
   displayID: string;
   num: number;
   isFullscreen: boolean;
+  appPath?: string;
 }
 
 export function useSpaces() {
@@ -42,6 +43,7 @@ export function useSpaces() {
           displayID: parts[2] || "Main",
           num: parseInt(parts[3] || "0", 10),
           isFullscreen: parts[4] === "1",
+          appPath: parts[5] || undefined,
         };
       });
   }

@@ -50,10 +50,7 @@ export default function Command() {
                 key={space.id}
                 title={space.name}
                 subtitle={`Space ${space.num}`}
-                icon={{
-                  source: Icon.Desktop,
-                  tintColor: isCurrent ? Color.Blue : undefined,
-                }}
+                icon={space.isFullscreen && space.appPath ? { fileIcon: space.appPath } : { source: Icon.Desktop, tintColor: isCurrent ? Color.Blue : undefined }}
                 accessories={isCurrent ? [{ tag: { value: "Current", color: Color.Blue } }] : []}
                 actions={
                   <ActionPanel>
