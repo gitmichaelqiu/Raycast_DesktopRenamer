@@ -3,8 +3,9 @@ import { runDesktopRenamerCommand, escapeAppleScriptString } from "./utils";
 import { useSpaces, Space, RenameSpaceForm } from "./spaces";
 
 export default function Command() {
-  const { spaces, groupedSpaces, currentName, isLoading, revalidate } = useSpaces();
-  const currentSpace = spaces.find((s) => s.name === currentName);
+  const { spaces, groupedSpaces, currentName, currentId, isLoading, revalidate } = useSpaces();
+  const currentIds = currentId ? currentId.split(",").map((s) => s.trim()) : [];
+  const currentSpace = spaces.find((s) => currentIds.includes(s.id));
 
   async function switchSpace(space: Space) {
     try {
@@ -44,7 +45,7 @@ export default function Command() {
       {Object.entries(groupedSpaces).map(([displayID, spaces]) => (
         <List.Section key={displayID} title={displayID}>
           {spaces.map((space) => {
-            const isCurrent = space.name === currentName;
+            const isCurrent = currentIds.includes(space.id);
             return (
               <List.Item
                 key={space.id}

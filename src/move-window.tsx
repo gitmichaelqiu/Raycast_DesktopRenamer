@@ -1,4 +1,4 @@
-import { List, ActionPanel, Action, Icon, Color, showToast, Toast } from "@raycast/api";
+import { List, ActionPanel, Action, Icon, showToast, Toast } from "@raycast/api";
 import { runDesktopRenamerCommand, escapeAppleScriptString } from "./utils";
 import { useSpaces, Space, RenameSpaceForm } from "./spaces";
 
@@ -31,22 +31,17 @@ export default function Command() {
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search desktops...">
       {Object.entries(groupedSpaces).map(([displayID, spaces]) => {
-        const filtered = spaces.filter((s) => !s.isFullscreen);
+        const filtered = spaces.filter((s) => !s.isFullscreen && s.name !== currentName);
         if (filtered.length === 0) return null;
         return (
           <List.Section key={displayID} title={displayID}>
             {filtered.map((space) => {
-              const isCurrent = space.name === currentName;
               return (
                 <List.Item
                   key={space.id}
                   title={space.name}
                   subtitle={`Space ${space.num}`}
-                  icon={{
-                    source: Icon.Window,
-                    tintColor: isCurrent ? Color.Blue : undefined,
-                  }}
-                  accessories={isCurrent ? [{ tag: { value: "Current", color: Color.Blue } }] : []}
+                  icon={{ source: Icon.Window }}
                   actions={
                     <ActionPanel>
                       <Action title="Move Window" icon={Icon.Window} onAction={() => moveWindow(space)} />

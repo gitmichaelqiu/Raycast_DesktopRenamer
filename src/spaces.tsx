@@ -18,7 +18,8 @@ export function useSpaces() {
         tell application "DesktopRenamer"
           set allSpaces to get all spaces
           set currentName to get current space name
-          return allSpaces & "~~~" & currentName
+          set currentId to get current space id
+          return allSpaces & "~~~" & currentName & "~~~" & currentId
         end tell
       `);
     } catch {
@@ -28,10 +29,12 @@ export function useSpaces() {
 
   let spaces: Space[] = [];
   let currentName = "";
+  let currentId = "";
 
   if (data) {
-    const [spacesStr, curName] = data.split("~~~");
+    const [spacesStr, curName, curId] = data.split("~~~");
     currentName = curName ? curName.trim() : "";
+    currentId = curId ? curId.trim() : "";
     spaces = spacesStr
       .split("\n")
       .filter((line) => line.trim().length > 0)
@@ -62,6 +65,7 @@ export function useSpaces() {
   return {
     spaces,
     currentName,
+    currentId,
     groupedSpaces,
     isLoading,
     revalidate,

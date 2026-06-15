@@ -263,7 +263,6 @@ export default function Command() {
                     color: action.type === "move" ? Color.Green : Color.Orange,
                   },
                 },
-                ...(action.window.space.isFullscreen ? [{ tag: { value: "Full Screen", color: Color.Blue } }] : []),
               ]}
               actions={
                 <ActionPanel>
@@ -293,8 +292,8 @@ export default function Command() {
                 subtitle={win.ownerName}
                 icon={win.appPath ? { fileIcon: win.appPath } : Icon.Window}
                 accessories={[
-                  ...(win.isMinimized ? [{ tag: { value: "Minimized", color: Color.Orange } }] : []),
                   ...(win.isHidden ? [{ tag: { value: "Hidden", color: Color.Magenta } }] : []),
+                  ...(!win.isHidden && win.isMinimized ? [{ tag: { value: "Minimized", color: Color.Orange } }] : []),
                   ...(win.space.isFullscreen ? [{ tag: { value: "Full Screen", color: Color.Blue } }] : []),
                 ]}
                 actions={
