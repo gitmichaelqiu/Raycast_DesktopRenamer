@@ -315,14 +315,14 @@ export default function Command() {
                       <Action
                         title="Close"
                         icon={Icon.XMarkCircle}
-                        shortcut={{ modifiers: ["cmd", "shift"], key: "w" }}
+                        shortcut={{ modifiers: ["ctrl", "shift"], key: "w" }}
                         onAction={() => stageAction(win, "close")}
                       />
                       {(win.isMinimized || win.isHidden) && (
                         <Action
                           title="Restore"
                           icon={Icon.ArrowUp}
-                          shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
+                          shortcut={{ modifiers: ["ctrl", "shift"], key: "r" }}
                           onAction={() => stageAction(win, "restore")}
                         />
                       )}
@@ -330,7 +330,7 @@ export default function Command() {
                         <Action
                           title="Minimize"
                           icon={Icon.Minus}
-                          shortcut={{ modifiers: ["cmd", "shift"], key: "m" }}
+                          shortcut={{ modifiers: ["ctrl", "shift"], key: "m" }}
                           onAction={() => stageAction(win, "minimize")}
                         />
                       )}
@@ -338,20 +338,20 @@ export default function Command() {
                         <Action
                           title="Hide"
                           icon={Icon.EyeDisabled}
-                          shortcut={{ modifiers: ["cmd", "shift"], key: "h" }}
+                          shortcut={{ modifiers: ["ctrl", "shift"], key: "h" }}
                           onAction={() => stageAction(win, "hide")}
                         />
                       )}
                       <Action
                         title={win.space.isFullscreen ? "Exit Full Screen" : "Enter Full Screen"}
                         icon={Icon.Maximize}
-                        shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
+                        shortcut={{ modifiers: ["ctrl", "shift"], key: "f" }}
                         onAction={() => stageAction(win, win.space.isFullscreen ? "exitFullScreen" : "enterFullScreen")}
                       />
                       <Action
                         title="Quit"
                         icon={Icon.Trash}
-                        shortcut={{ modifiers: ["cmd", "shift"], key: "q" }}
+                        shortcut={{ modifiers: ["ctrl", "shift"], key: "q" }}
                         onAction={() => stageAction(win, "quit")}
                       />
                     </ActionPanel.Section>

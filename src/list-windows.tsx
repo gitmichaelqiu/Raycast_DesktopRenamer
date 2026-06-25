@@ -263,14 +263,14 @@ export default function Command() {
                         <Action
                           title="Close Window"
                           icon={Icon.XMarkCircle}
-                          shortcut={{ modifiers: ["cmd", "shift"], key: "w" }}
+                          shortcut={{ modifiers: ["ctrl", "shift"], key: "w" }}
                           onAction={() => handleWindowAction(entry, "close")}
                         />
                         {(entry.isMinimized || entry.isHidden) && (
                           <Action
                             title="Restore Window"
                             icon={Icon.ArrowUp}
-                            shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
+                            shortcut={{ modifiers: ["ctrl", "shift"], key: "r" }}
                             onAction={() => handleWindowAction(entry, "restore")}
                           />
                         )}
@@ -278,7 +278,7 @@ export default function Command() {
                           <Action
                             title="Minimize Window"
                             icon={Icon.Minus}
-                            shortcut={{ modifiers: ["cmd", "shift"], key: "m" }}
+                            shortcut={{ modifiers: ["ctrl", "shift"], key: "m" }}
                             onAction={() => handleWindowAction(entry, "minimize")}
                           />
                         )}
@@ -286,14 +286,14 @@ export default function Command() {
                           <Action
                             title="Hide Application"
                             icon={Icon.EyeDisabled}
-                            shortcut={{ modifiers: ["cmd", "shift"], key: "h" }}
+                            shortcut={{ modifiers: ["ctrl", "shift"], key: "h" }}
                             onAction={() => handleWindowAction(entry, "hide")}
                           />
                         )}
                         <Action
                           title={entry.space.isFullscreen ? "Exit Full Screen" : "Enter Full Screen"}
                           icon={Icon.Maximize}
-                          shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
+                          shortcut={{ modifiers: ["ctrl", "shift"], key: "f" }}
                           onAction={() =>
                             handleWindowAction(entry, entry.space.isFullscreen ? "exitFullScreen" : "enterFullScreen")
                           }
@@ -301,7 +301,7 @@ export default function Command() {
                         <Action
                           title="Quit Application"
                           icon={Icon.Trash}
-                          shortcut={{ modifiers: ["cmd", "shift"], key: "q" }}
+                          shortcut={{ modifiers: ["ctrl", "shift"], key: "q" }}
                           onAction={() => handleWindowAction(entry, "quit")}
                         />
                       </ActionPanel.Section>
