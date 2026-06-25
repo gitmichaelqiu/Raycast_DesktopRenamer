@@ -230,7 +230,9 @@ export default function Command() {
                   icon={entry.appPath ? { fileIcon: entry.appPath } : Icon.Window}
                   accessories={[
                     ...(entry.isHidden ? [{ tag: { value: "Hidden", color: Color.Magenta } }] : []),
-                    ...(!entry.isHidden && entry.isMinimized ? [{ tag: { value: "Minimized", color: Color.Orange } }] : []),
+                    ...(!entry.isHidden && entry.isMinimized
+                      ? [{ tag: { value: "Minimized", color: Color.Orange } }]
+                      : []),
                     ...(entry.space.isFullscreen ? [{ tag: { value: "Full Screen", color: Color.Blue } }] : []),
                   ]}
                   actions={
