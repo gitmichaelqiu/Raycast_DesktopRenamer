@@ -3,7 +3,7 @@ import { runDesktopRenamerCommand, escapeAppleScriptString } from "./utils";
 import { useSpaces, Space, RenameSpaceForm } from "./spaces";
 
 export default function Command() {
-  const { spaces, groupedSpaces, currentName, currentId, isLoading, revalidate } = useSpaces();
+  const { spaces, groupedSpaces, currentId, isLoading, revalidate } = useSpaces();
   const currentIds = currentId ? currentId.split(",").map((s) => s.trim()) : [];
   const currentSpace = spaces.find((s) => currentIds.includes(s.id));
 
@@ -51,7 +51,11 @@ export default function Command() {
                 key={space.id}
                 title={space.name}
                 subtitle={`Space ${space.num}`}
-                icon={space.isFullscreen && space.appPath ? { fileIcon: space.appPath } : { source: Icon.Desktop, tintColor: isCurrent ? Color.Blue : undefined }}
+                icon={
+                  space.isFullscreen && space.appPath
+                    ? { fileIcon: space.appPath }
+                    : { source: Icon.Desktop, tintColor: isCurrent ? Color.Blue : undefined }
+                }
                 accessories={isCurrent ? [{ tag: { value: "Current", color: Color.Blue } }] : []}
                 actions={
                   <ActionPanel>
