@@ -112,26 +112,22 @@ function getActionLabel(type: string): string {
 
 export default function Command() {
   const [isExecuting, setIsExecuting] = useState(false);
-  const [stagedMoves, setStagedMoves] = useState<Map<number, StagedAction>>(new Map());
+  const [stagedMoves, setStagedMoves] = useState<Map<string, StagedAction>>(new Map());
 
   const { data, isLoading } = usePromise(async () => {
-    try {
-      const result = await runDesktopRenamerScript(`
-        tell application "DesktopRenamer"
-          get windows
-        end tell
-      `);
-      return parseWindowData(result);
-    } catch {
-      return { spaces: [], windows: [] };
-    }
+    const result = await runDesktopRenamerScript(`
+      tell application "DesktopRenamer"
+        get windows
+      end tell
+    `);
+    return parseWindowData(result);
   });
 
   const spaces = data?.spaces ?? [];
   const allWindows = data?.windows ?? [];
 
   // Separate windows into staged and unstaged
-  const unstagedWindows = allWindows.filter((w) => !stagedMoves.has(w.windowID));
+  const unstagedWindows = allWindows.filter((w) => !stagedMoves.has(actionKey(w)));
   const stagedWindowsArray = Array.from(stagedMoves.values());
 
   const windowsBySpace = new Map<string, WindowEntry[]>();
@@ -147,13 +143,13 @@ export default function Command() {
     targetSpace?: SpaceGroup,
   ) {
     const newStaged = new Map(stagedMoves);
-    newStaged.set(window.windowID, { window, type, targetSpace });
+    newStaged.set(actionKey(window), { window, type, targetSpace });
     setStagedMoves(newStaged);
   }
 
-  function unstageAction(windowID: number) {
+  function unstageAction(entry: WindowEntry) {
     const newStaged = new Map(stagedMoves);
-    newStaged.delete(windowID);
+    newStaged.delete(actionKey(entry));
     setStagedMoves(newStaged);
   }
 
@@ -218,9 +214,10 @@ export default function Command() {
           }
           totalExecuted++;
 
-          // Since move window to space switches the system to the target space,
-          // we must switch BACK to our current source space to process the next window in this group.
-          if (action.type === "move" && sourceActions.indexOf(action) < sourceActions.length - 1) {
+          // After a move, macOS is on the target space. Switch back to the source
+          // space so any subsequent non-move actions (close, minimize, etc.) from
+          // this source group execute from the correct desktop context.
+          if (action.type === "move") {
             await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(sourceId)}"`);
             await delay(600);
           }
@@ -260,7 +257,7 @@ export default function Command() {
         <List.Section title="Staged Actions (Pending)" subtitle={`${stagedWindowsArray.length} items`}>
           {stagedWindowsArray.map((action) => (
             <List.Item
-              key={`staged_${action.window.windowID}`}
+              key={`staged_${actionKey(action.window)}`}
               title={action.window.title}
               subtitle={action.window.ownerName}
               icon={action.window.appPath ? { fileIcon: action.window.appPath } : Icon.Window}
@@ -280,7 +277,7 @@ export default function Command() {
                   <Action
                     title="Unstage Action"
                     icon={Icon.XMarkCircle}
-                    onAction={() => unstageAction(action.window.windowID)}
+                    onAction={() => unstageAction(action.window)}
                   />
                   <ExecuteAction />
                 </ActionPanel>
