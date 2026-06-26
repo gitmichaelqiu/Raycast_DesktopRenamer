@@ -18,8 +18,8 @@ interface WindowEntry {
   appPath: string;
   title: string;
   space: SpaceGroup;
-  isMinimized: boolean;
-  isHidden: boolean;
+  isMinimized: boolean | undefined;
+  isHidden: boolean | undefined;
 }
 
 function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEntry[] } {
@@ -57,17 +57,16 @@ function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEn
         });
       } else if (parts.length >= 5) {
         // Legacy format: wid|pid|owner|appPath|title (no state fields).
-        // Default both to true so the UI shows Restore and hides Minimize/Hide
-        // rather than the reverse — safer to offer a restore that may no-op
-        // than to offer minimize for an already-minimized window.
+        // Leave state undefined so the UI only shows state-dependent
+        // actions and badges when the value is confirmed.
         windows.push({
           windowID: parseInt(parts[0], 10),
           pid: parseInt(parts[1], 10),
           ownerName: parts[2],
           appPath: parts[3],
           title: parts.slice(4).join("|"),
-          isMinimized: true,
-          isHidden: true,
+          isMinimized: undefined,
+          isHidden: undefined,
           space: { ...currentSpace },
         });
       }
@@ -231,8 +230,8 @@ export default function Command() {
                   subtitle={entry.ownerName}
                   icon={entry.appPath ? { fileIcon: entry.appPath } : Icon.Window}
                   accessories={[
-                    ...(entry.isHidden ? [{ tag: { value: "Hidden", color: Color.Magenta } }] : []),
-                    ...(!entry.isHidden && entry.isMinimized
+                    ...(entry.isHidden === true ? [{ tag: { value: "Hidden", color: Color.Magenta } }] : []),
+                    ...(entry.isHidden !== true && entry.isMinimized === true
                       ? [{ tag: { value: "Minimized", color: Color.Orange } }]
                       : []),
                     ...(entry.space.isFullscreen ? [{ tag: { value: "Full Screen", color: Color.Blue } }] : []),
@@ -270,7 +269,7 @@ export default function Command() {
                           shortcut={{ modifiers: ["ctrl", "shift"], key: "w" }}
                           onAction={() => handleWindowAction(entry, "close")}
                         />
-                        {(entry.isMinimized || entry.isHidden) && (
+                        {(entry.isMinimized === true || entry.isHidden === true) && (
                           <Action
                             title="Restore Window"
                             icon={Icon.ArrowUp}
@@ -278,7 +277,7 @@ export default function Command() {
                             onAction={() => handleWindowAction(entry, "restore")}
                           />
                         )}
-                        {!entry.isMinimized && (
+                        {entry.isMinimized !== true && (
                           <Action
                             title="Minimize Window"
                             icon={Icon.Minus}
@@ -286,7 +285,7 @@ export default function Command() {
                             onAction={() => handleWindowAction(entry, "minimize")}
                           />
                         )}
-                        {!entry.isHidden && (
+                        {entry.isHidden !== true && (
                           <Action
                             title="Hide Application"
                             icon={Icon.EyeDisabled}

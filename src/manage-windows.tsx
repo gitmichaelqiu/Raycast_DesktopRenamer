@@ -18,8 +18,8 @@ interface WindowEntry {
   appPath: string;
   title: string;
   space: SpaceGroup;
-  isMinimized: boolean;
-  isHidden: boolean;
+  isMinimized: boolean | undefined;
+  isHidden: boolean | undefined;
 }
 
 function actionKey(w: { windowID: number; pid: number }): string {
@@ -60,17 +60,16 @@ function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEn
         });
       } else if (parts.length >= 5) {
         // Legacy format: wid|pid|owner|appPath|title (no state fields).
-        // Default both to true so the UI shows Restore and hides Minimize/Hide
-        // rather than the reverse — safer to offer a restore that may no-op
-        // than to offer minimize for an already-minimized window.
+        // Leave state undefined so the UI only shows state-dependent
+        // actions and badges when the value is confirmed.
         windows.push({
           windowID: parseInt(parts[0], 10),
           pid: parseInt(parts[1], 10),
           ownerName: parts[2],
           appPath: parts[3],
           title: parts.slice(4).join("|"),
-          isMinimized: true,
-          isHidden: true,
+          isMinimized: undefined,
+          isHidden: undefined,
           space: { ...currentSpace },
         });
       }
@@ -300,8 +299,8 @@ export default function Command() {
                 subtitle={win.ownerName}
                 icon={win.appPath ? { fileIcon: win.appPath } : Icon.Window}
                 accessories={[
-                  ...(win.isHidden ? [{ tag: { value: "Hidden", color: Color.Magenta } }] : []),
-                  ...(!win.isHidden && win.isMinimized ? [{ tag: { value: "Minimized", color: Color.Orange } }] : []),
+                  ...(win.isHidden === true ? [{ tag: { value: "Hidden", color: Color.Magenta } }] : []),
+                  ...(win.isHidden !== true && win.isMinimized === true ? [{ tag: { value: "Minimized", color: Color.Orange } }] : []),
                   ...(win.space.isFullscreen ? [{ tag: { value: "Full Screen", color: Color.Blue } }] : []),
                 ]}
                 actions={
@@ -326,7 +325,7 @@ export default function Command() {
                         shortcut={{ modifiers: ["ctrl", "shift"], key: "w" }}
                         onAction={() => stageAction(win, "close")}
                       />
-                      {(win.isMinimized || win.isHidden) && (
+                      {(win.isMinimized === true || win.isHidden === true) && (
                         <Action
                           title="Restore"
                           icon={Icon.ArrowUp}
@@ -334,7 +333,7 @@ export default function Command() {
                           onAction={() => stageAction(win, "restore")}
                         />
                       )}
-                      {!win.isMinimized && (
+                      {win.isMinimized !== true && (
                         <Action
                           title="Minimize"
                           icon={Icon.Minus}
@@ -342,7 +341,7 @@ export default function Command() {
                           onAction={() => stageAction(win, "minimize")}
                         />
                       )}
-                      {!win.isHidden && (
+                      {win.isHidden !== true && (
                         <Action
                           title="Hide"
                           icon={Icon.EyeDisabled}
