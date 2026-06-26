@@ -56,15 +56,18 @@ function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEn
           space: { ...currentSpace },
         });
       } else if (parts.length >= 5) {
-        // Legacy format: wid|pid|owner|appPath|title
+        // Legacy format: wid|pid|owner|appPath|title (no state fields).
+        // Default both to true so the UI shows Restore and hides Minimize/Hide
+        // rather than the reverse — safer to offer a restore that may no-op
+        // than to offer minimize for an already-minimized window.
         windows.push({
           windowID: parseInt(parts[0], 10),
           pid: parseInt(parts[1], 10),
           ownerName: parts[2],
           appPath: parts[3],
           title: parts.slice(4).join("|"),
-          isMinimized: false,
-          isHidden: false,
+          isMinimized: true,
+          isHidden: true,
           space: { ...currentSpace },
         });
       }
