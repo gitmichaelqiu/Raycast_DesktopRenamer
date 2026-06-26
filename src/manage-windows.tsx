@@ -39,7 +39,10 @@ function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEn
         name: parts[1] || "Unknown",
         displayID: parts[2] || "Display",
         num: parseInt(parts[3] || "0", 10),
-        isFullscreen: parts[4] === "1",
+        // parts[4] (isFullscreen) is only present in the 5-field format.
+        // When absent (legacy 4-field format), default to true to avoid
+        // offering the space as a move destination for fullscreen spaces.
+        isFullscreen: parts.length >= 5 ? parts[4] === "1" : true,
       };
       spaces.push(currentSpace);
     } else if (line.startsWith("  ") && currentSpace) {
