@@ -8,7 +8,7 @@ interface SpaceGroup {
   name: string;
   displayID: string;
   num: number;
-  isFullscreen: boolean;
+  isFullscreen: boolean | undefined;
 }
 
 interface WindowEntry {
@@ -40,9 +40,9 @@ function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEn
         displayID: parts[2] || "Display",
         num: parseInt(parts[3] || "0", 10),
         // parts[4] (isFullscreen) is only present in the 5-field format.
-        // When absent (legacy 4-field format), default to true to avoid
-        // offering the space as a move destination for fullscreen spaces.
-        isFullscreen: parts.length >= 5 ? parts[4] === "1" : true,
+        // When absent (legacy 4-field format), leave undefined so filters
+        // treat the space as unknown-status (allow as move target).
+        isFullscreen: parts.length >= 5 ? parts[4] === "1" : undefined,
       };
       spaces.push(currentSpace);
     } else if (line.startsWith("  ") && currentSpace) {
@@ -308,7 +308,7 @@ export default function Command() {
                   <ActionPanel>
                     <ActionPanel.Submenu title="Stage Move to Desktop…" icon={Icon.ArrowRight}>
                       {spaces
-                        .filter((s) => s.id !== space.id && !s.isFullscreen)
+                        .filter((s) => s.id !== space.id && s.isFullscreen !== true)
                         .map((targetSpace) => (
                           <Action
                             key={targetSpace.id}
