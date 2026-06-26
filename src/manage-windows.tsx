@@ -295,7 +295,7 @@ export default function Command() {
           <List.Section key={space.id} title={space.name} subtitle={`${spaceWindows.length} windows`}>
             {spaceWindows.map((win) => (
               <List.Item
-                key={`win_${win.windowID}`}
+                key={`win_${actionKey(win)}`}
                 title={win.title}
                 subtitle={win.ownerName}
                 icon={win.appPath ? { fileIcon: win.appPath } : Icon.Window}
