@@ -300,7 +300,9 @@ export default function Command() {
                 icon={win.appPath ? { fileIcon: win.appPath } : Icon.Window}
                 accessories={[
                   ...(win.isHidden === true ? [{ tag: { value: "Hidden", color: Color.Magenta } }] : []),
-                  ...(win.isHidden !== true && win.isMinimized === true ? [{ tag: { value: "Minimized", color: Color.Orange } }] : []),
+                  ...(win.isHidden !== true && win.isMinimized === true
+                    ? [{ tag: { value: "Minimized", color: Color.Orange } }]
+                    : []),
                   ...(win.space.isFullscreen ? [{ tag: { value: "Full Screen", color: Color.Blue } }] : []),
                 ]}
                 actions={
