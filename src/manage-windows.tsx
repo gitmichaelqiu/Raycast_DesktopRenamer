@@ -22,6 +22,10 @@ interface WindowEntry {
   isHidden: boolean;
 }
 
+function actionKey(w: { windowID: number; pid: number }): string {
+  return `${w.windowID}-${w.pid}`;
+}
+
 function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEntry[] } {
   const spaces: SpaceGroup[] = [];
   const windows: WindowEntry[] = [];
