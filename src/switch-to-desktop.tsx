@@ -1,4 +1,5 @@
 import { List, ActionPanel, Action, Icon, Color, showToast, Toast } from "@raycast/api";
+import { useState } from "react";
 import { runDesktopRenamerCommand, escapeAppleScriptString } from "./utils";
 import { isMoveTarget, useSpaces, Space, RenameSpaceForm } from "./spaces";
 
@@ -6,6 +7,7 @@ export default function Command() {
   const { spaces, groupedSpaces, currentId, isLoading, revalidate } = useSpaces();
   const currentIds = currentId ? currentId.split(",").map((s) => s.trim()) : [];
   const currentSpace = spaces.find((s) => currentIds.includes(s.id));
+  const [rearrangingSpaceID, setRearrangingSpaceID] = useState<string | null>(null);
 
   async function switchSpace(space: Space) {
     try {
@@ -41,6 +43,8 @@ export default function Command() {
   }
 
   async function rearrangeSpace(space: Space, direction: "up" | "down") {
+    if (rearrangingSpaceID !== null) return;
+    setRearrangingSpaceID(space.id);
     try {
       const sanitizedId = escapeAppleScriptString(space.id);
       await runDesktopRenamerCommand(`rearrange space "${sanitizedId}" direction "${direction}"`);
@@ -52,11 +56,13 @@ export default function Command() {
       await revalidate();
     } catch {
       // Handled by utils
+    } finally {
+      setRearrangingSpaceID(null);
     }
   }
 
   return (
-    <List isLoading={isLoading} searchBarPlaceholder="Search desktops...">
+    <List isLoading={isLoading || rearrangingSpaceID !== null} searchBarPlaceholder="Search desktops...">
       {Object.entries(groupedSpaces).map(([displayID, spaces]) => (
         <List.Section key={displayID} title={displayID}>
           {spaces.map((space) => {
