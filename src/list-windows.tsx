@@ -1,6 +1,6 @@
 import { List, ActionPanel, Action, Icon, showToast, Toast, popToRoot, Color, getPreferenceValues } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   runDesktopRenamerCommand,
   runDesktopRenamerScript,
@@ -82,6 +82,7 @@ function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEn
 
 export default function Command() {
   const [filterSpaceId, setFilterSpaceId] = useState("all");
+  const [terminatingPIDs, setTerminatingPIDs] = useState<Set<number>>(new Set());
 
   const { data, isLoading, revalidate } = usePromise(async () => {
     const result = await runDesktopRenamerScript(`
@@ -93,7 +94,17 @@ export default function Command() {
   });
 
   const allSpaces = data?.spaces ?? [];
-  const allWindows = data?.windows ?? [];
+  const rawWindows = data?.windows ?? [];
+  const allWindows = rawWindows.filter((window) => !terminatingPIDs.has(window.pid));
+
+  useEffect(() => {
+    if (!data) return;
+
+    setTerminatingPIDs((previous) => {
+      const next = new Set(Array.from(previous).filter((pid) => rawWindows.some((window) => window.pid === pid)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [data, rawWindows]);
 
   // Apply filter
   const filteredWindows = filterSpaceId === "all" ? allWindows : allWindows.filter((w) => w.space.id === filterSpaceId);
@@ -200,12 +211,22 @@ export default function Command() {
 
   async function handleWindowAction(entry: WindowEntry, action: string) {
     try {
+      if (action === "quit") {
+        setTerminatingPIDs((previous) => new Set(previous).add(entry.pid));
+      }
       const toast = await showToast({ style: Toast.Style.Animated, title: `Executing action: ${action}...` });
       await runDesktopRenamerCommand(`execute window action "${entry.windowID}" pid "${entry.pid}" action "${action}"`);
       toast.style = Toast.Style.Success;
       toast.title = `Executed ${action}`;
       revalidate();
     } catch {
+      if (action === "quit") {
+        setTerminatingPIDs((previous) => {
+          const next = new Set(previous);
+          next.delete(entry.pid);
+          return next;
+        });
+      }
       // Error handled by utils
     }
   }

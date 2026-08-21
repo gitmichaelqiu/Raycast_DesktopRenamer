@@ -1,6 +1,6 @@
 import { List, ActionPanel, Action, showToast, Toast, popToRoot, Icon, Color, getPreferenceValues } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   runDesktopRenamerCommand,
   runDesktopRenamerScript,
@@ -117,6 +117,7 @@ function getActionLabel(type: string): string {
 export default function Command() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [stagedMoves, setStagedMoves] = useState<Map<string, StagedAction>>(new Map());
+  const [terminatingPIDs, setTerminatingPIDs] = useState<Set<number>>(new Set());
 
   const { data, isLoading } = usePromise(async () => {
     const result = await runDesktopRenamerScript(`
@@ -128,7 +129,17 @@ export default function Command() {
   });
 
   const spaces = data?.spaces ?? [];
-  const allWindows = data?.windows ?? [];
+  const rawWindows = data?.windows ?? [];
+  const allWindows = rawWindows.filter((window) => !terminatingPIDs.has(window.pid));
+
+  useEffect(() => {
+    if (!data) return;
+
+    setTerminatingPIDs((previous) => {
+      const next = new Set(Array.from(previous).filter((pid) => rawWindows.some((window) => window.pid === pid)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [data, rawWindows]);
 
   // Separate windows into staged and unstaged
   const unstagedWindows = allWindows.filter((w) => !stagedMoves.has(actionKey(w)));
@@ -164,6 +175,12 @@ export default function Command() {
     }
 
     setIsExecuting(true);
+    const quittingPIDs = stagedWindowsArray
+      .filter((action) => action.type === "quit")
+      .map((action) => action.window.pid);
+    if (quittingPIDs.length > 0) {
+      setTerminatingPIDs((previous) => new Set([...previous, ...quittingPIDs]));
+    }
     const toast = await showToast({ style: Toast.Style.Animated, title: "Executing batch operations..." });
 
     try {
