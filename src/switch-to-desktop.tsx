@@ -40,6 +40,21 @@ export default function Command() {
     }
   }
 
+  async function rearrangeSpace(space: Space, direction: "up" | "down") {
+    try {
+      const sanitizedId = escapeAppleScriptString(space.id);
+      await runDesktopRenamerCommand(`rearrange space "${sanitizedId}" direction "${direction}"`);
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      await showToast({
+        style: Toast.Style.Success,
+        title: `${space.name} moved ${direction}`,
+      });
+      await revalidate();
+    } catch {
+      // Handled by utils
+    }
+  }
+
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search desktops...">
       {Object.entries(groupedSpaces).map(([displayID, spaces]) => (
@@ -75,6 +90,22 @@ export default function Command() {
                         icon={Icon.Pencil}
                         target={<RenameSpaceForm space={space} onRename={revalidate} />}
                       />
+                    )}
+                    {isMoveTarget(space) && (
+                      <>
+                        <Action
+                          title="Move Space up"
+                          icon={Icon.ArrowUp}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "arrowUp" }}
+                          onAction={() => rearrangeSpace(space, "up")}
+                        />
+                        <Action
+                          title="Move Space Down"
+                          icon={Icon.ArrowDown}
+                          shortcut={{ modifiers: ["cmd", "shift"], key: "arrowDown" }}
+                          onAction={() => rearrangeSpace(space, "down")}
+                        />
+                      </>
                     )}
                   </ActionPanel>
                 }
