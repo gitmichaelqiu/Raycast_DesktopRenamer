@@ -194,6 +194,12 @@ function parseSpaceAPICommand(command: string): { name: string; arguments: Recor
   if (command === "move window next") return { name: "moveWindowNext", arguments: {} };
   if (command === "move window previous") return { name: "moveWindowPrevious", arguments: {} };
   if (command === "reload space labels") return { name: "reloadSpaceLabels", arguments: {} };
+  if (command === "toggle menubar") return { name: "toggleMenubar", arguments: {} };
+  if (command === "toggle launcher") return { name: "toggleLauncher", arguments: {} };
+  if (command === "toggle labels") return { name: "toggleLabels", arguments: {} };
+  if (command === "toggle active label") return { name: "toggleActiveLabel", arguments: {} };
+  if (command === "toggle preview label") return { name: "togglePreviewLabel", arguments: {} };
+  if (command === "toggle desktop visibility") return { name: "toggleDesktopVisibility", arguments: {} };
 
   let match = command.match(/^switch to space "(.*)"$/);
   if (match) return { name: "switchToSpace", arguments: { spaceID: quoted(match[1]) } };
@@ -209,11 +215,17 @@ function parseSpaceAPICommand(command: string): { name: string; arguments: Recor
   if (match) return { name: "focusWindow", arguments: { windowID: match[1], pid: match[2] } };
   match = command.match(/^execute window action "(\d+)" pid "(\d+)" action "([^"]+)"$/);
   if (match) return { name: "executeWindowAction", arguments: { windowID: match[1], pid: match[2], action: match[3] } };
-  match = command.match(/^move specific window "(\d+)" pid "(\d+)" from space "(.*)" to space "(.*)"$/);
+  match = command.match(/^move specific window "(\d+)"(?: pid "(\d+)")? from space "(.*)" to space "(.*)"$/);
   if (match) {
+    const [, windowID, pid, fromSpaceID, targetSpaceID] = match;
     return {
       name: "moveSpecificWindow",
-      arguments: { windowID: match[1], pid: match[2], fromSpaceID: quoted(match[3]), targetSpaceID: quoted(match[4]) },
+      arguments: {
+        windowID,
+        ...(pid ? { pid } : {}),
+        fromSpaceID: quoted(fromSpaceID),
+        targetSpaceID: quoted(targetSpaceID),
+      },
     };
   }
   return null;
@@ -277,7 +289,9 @@ while (!finished && Date.now() < deadline) {
 }
 center.removeObserver(observer);
 if (!response) throw new Error('SpaceAPI request timed out.');
-if (String(response.success) !== 'true') throw new Error(String(response.error || 'SpaceAPI command failed.'));
+if (!(response.success === true || String(response.success) === 'true' || String(response.success) === '1')) {
+  throw new Error(String(response.error || 'SpaceAPI command failed.'));
+}
 console.log(String(response.result || ''));
 `;
 }
