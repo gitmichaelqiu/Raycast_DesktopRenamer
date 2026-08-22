@@ -255,11 +255,10 @@ async function runSpaceAPICommand(command: string, arguments_: Record<string, st
 }
 
 function makeSpaceAPIJXA(requestID: string, command: string, arguments_: Record<string, string>): string {
-  const request = JSON.stringify({ requestID, command, arguments: arguments_ });
+  const requestObject = { requestID, command, arguments: arguments_ };
   return `
 ObjC.import('Foundation');
-const request = ${JSON.stringify(request)};
-const requestObject = JSON.parse(request);
+const requestObject = ${JSON.stringify(requestObject)};
 const center = $.NSDistributedNotificationCenter.defaultCenter;
 const resultName = '${SPACE_API_RESULT_NOTIFICATION}';
 let response = null;
