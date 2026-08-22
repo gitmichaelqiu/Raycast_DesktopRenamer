@@ -250,8 +250,7 @@ async function runSpaceAPICommand(command: string, arguments_: Record<string, st
   const { stdout, stderr } = await execFileAsync("/usr/bin/osascript", ["-l", "JavaScript", "-e", script], {
     maxBuffer: 10 * 1024 * 1024,
   });
-  if (stderr.trim()) throw new Error(stderr.trim());
-  return stdout.trimEnd();
+  return (stdout.trim() ? stdout : stderr).trimEnd();
 }
 
 function makeSpaceAPIJXA(requestID: string, command: string, arguments_: Record<string, string>): string {
