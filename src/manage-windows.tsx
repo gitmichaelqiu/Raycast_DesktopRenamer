@@ -175,7 +175,6 @@ export default function Command() {
     }
 
     setIsExecuting(true);
-    await popToRoot();
 
     const quittingPIDs = stagedWindowsArray
       .filter((action) => action.type === "quit")
@@ -255,6 +254,7 @@ export default function Command() {
 
       toast.style = Toast.Style.Success;
       toast.title = `Successfully completed ${totalExecuted} operation${totalExecuted === 1 ? "" : "s"}`;
+      await popToRoot();
     } catch (error) {
       toast.style = Toast.Style.Failure;
       toast.title = "Batch operation failed";
