@@ -269,7 +269,8 @@ const observer = center.addObserverForNameObjectQueueUsingBlock(
   undefined,
   function(notification) {
     const info = ObjC.unwrap(notification.userInfo);
-    if (info && String(info.requestID) === requestObject.requestID) {
+    const responseID = info ? ObjC.unwrap(info.requestID) : undefined;
+    if (info && String(responseID) === requestObject.requestID) {
       response = info;
       finished = true;
     }
@@ -286,10 +287,13 @@ while (!finished && Date.now() < deadline) {
 }
 center.removeObserver(observer);
 if (!response) throw new Error('SpaceAPI request timed out.');
-if (!(response.success === true || String(response.success) === 'true' || String(response.success) === '1')) {
-  throw new Error(String(response.error || 'SpaceAPI command failed.'));
+const success = ObjC.unwrap(response.success);
+if (!(success === true || String(success) === 'true' || String(success) === '1')) {
+  const error = ObjC.unwrap(response.error);
+  throw new Error(String(error || 'SpaceAPI command failed.'));
 }
-console.log(String(response.result || ''));
+const result = ObjC.unwrap(response.result);
+console.log(String(result || ''));
 `;
 }
 
