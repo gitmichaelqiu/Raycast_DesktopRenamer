@@ -11,6 +11,19 @@ export interface Space {
   appPath?: string;
 }
 
+interface SpaceSnapshot {
+  currentSpaceIDs: string[];
+  currentSpaceName: string;
+  spaces: Array<{
+    id: string;
+    name: string;
+    displayID: string;
+    number: number;
+    isFullscreen: boolean;
+    appPath?: string;
+  }>;
+}
+
 export function isMoveTarget(space: Pick<Space, "isFullscreen">) {
   return space.isFullscreen === false;
 }
@@ -35,7 +48,23 @@ export function useSpaces() {
   let currentName = "";
   let currentId = "";
 
-  if (data) {
+  if (data?.trimStart().startsWith("{")) {
+    try {
+      const snapshot = JSON.parse(data) as SpaceSnapshot;
+      currentName = snapshot.currentSpaceName;
+      currentId = snapshot.currentSpaceIDs.join(",");
+      spaces = snapshot.spaces.map((space) => ({
+        id: space.id,
+        name: space.name || "Unknown",
+        displayID: space.displayID || "Main",
+        num: space.number,
+        isFullscreen: space.isFullscreen,
+        appPath: space.appPath,
+      }));
+    } catch {
+      // Treat malformed snapshots as an unavailable response.
+    }
+  } else if (data) {
     const [spacesStr, curName, curId] = data.split("~~~");
     currentName = curName ? curName.trim() : "";
     currentId = curId ? curId.trim() : "";

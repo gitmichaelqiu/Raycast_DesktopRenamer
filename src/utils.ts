@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 export const MINIMUM_DESKTOP_RENAMER_API_VERSION = "1.0.0";
 const SUPPORTED_DESKTOP_RENAMER_API_MAJOR = 1;
 
-let apiCompatibilityCheck: Promise<void> | null = null;
+let installedApplicationLookup: Promise<boolean> | null = null;
 const execFileAsync = promisify(execFile);
 const SPACE_API_COMMAND_NOTIFICATION = "com.michaelqiu.DesktopRenamer.PerformCommand";
 const SPACE_API_RESULT_NOTIFICATION = "com.michaelqiu.DesktopRenamer.CommandResult";
@@ -23,8 +23,19 @@ export function escapeAppleScriptString(str: string): string {
 }
 
 export async function isDesktopRenamerInstalled(): Promise<boolean> {
-  const applications = await getApplications();
-  return applications.some((app) => app.bundleId === "com.michaelqiu.DesktopRenamer");
+  if (!installedApplicationLookup) {
+    installedApplicationLookup = getApplications()
+      .then((applications) => applications.some((app) => app.bundleId === "com.michaelqiu.DesktopRenamer"))
+      .then((isInstalled) => {
+        if (!isInstalled) installedApplicationLookup = null;
+        return isInstalled;
+      })
+      .catch((error) => {
+        installedApplicationLookup = null;
+        throw error;
+      });
+  }
+  return installedApplicationLookup;
 }
 
 export async function checkDesktopRenamerRunning(): Promise<boolean> {
@@ -119,7 +130,6 @@ export async function runDesktopRenamerScript(scriptContent: string, errorMessag
     }
     if (method !== "applescript") {
       try {
-        await ensureCompatibleAPI();
         const apiResult = await runSpaceAPIForScript(scriptContent);
         if (apiResult !== null) return apiResult;
       } catch (error) {
@@ -131,31 +141,6 @@ export async function runDesktopRenamerScript(scriptContent: string, errorMessag
     await handleDesktopRenamerError(error, errorMessage);
     throw error;
   }
-}
-
-async function ensureCompatibleAPI() {
-  if (!apiCompatibilityCheck) {
-    apiCompatibilityCheck = (async () => {
-      const version = String(
-        communicationMethod() === "applescript"
-          ? await runAppleScript('tell application "DesktopRenamer" to get api version')
-          : await runSpaceAPICommand("getAPIVersion", {}),
-      ).trim();
-      const apiMajor = Number.parseInt(version.split(".")[0] ?? "", 10);
-      if (
-        compareVersions(version, MINIMUM_DESKTOP_RENAMER_API_VERSION) < 0 ||
-        apiMajor !== SUPPORTED_DESKTOP_RENAMER_API_MAJOR
-      ) {
-        throw new Error(
-          `DesktopRenamer API major version ${SUPPORTED_DESKTOP_RENAMER_API_MAJOR} is required (found ${version || "unknown"})`,
-        );
-      }
-    })().catch((error) => {
-      apiCompatibilityCheck = null;
-      throw error;
-    });
-  }
-  return apiCompatibilityCheck;
 }
 
 function compareVersions(left: string, right: string): number {
@@ -172,7 +157,6 @@ export async function runDesktopRenamerCommand(command: string, errorMessage = "
   const method = communicationMethod();
   if (method !== "applescript") {
     try {
-      await ensureCompatibleAPI();
       const apiCommand = parseSpaceAPICommand(command);
       if (apiCommand) return await runSpaceAPICommand(apiCommand.name, apiCommand.arguments);
     } catch (error) {
@@ -234,26 +218,48 @@ function parseSpaceAPICommand(command: string): { name: string; arguments: Recor
 async function runSpaceAPIForScript(scriptContent: string): Promise<string | null> {
   if (scriptContent.includes("get windows")) return await runSpaceAPICommand("getWindows", {});
   if (scriptContent.includes("get all spaces") && scriptContent.includes("get current space name")) {
-    const [spaces, name, id] = await Promise.all([
-      runSpaceAPICommand("getAllSpaces", {}),
-      runSpaceAPICommand("getCurrentSpaceName", {}),
-      runSpaceAPICommand("getCurrentSpaceID", {}),
-    ]);
-    return `${spaces}~~~${name}~~~${id}`;
+    return await runSpaceAPICommand("getSpaceSnapshot", {});
   }
   return null;
 }
 
 async function runSpaceAPICommand(command: string, arguments_: Record<string, string>): Promise<string> {
   const requestID = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const script = makeSpaceAPIJXA(requestID, command, arguments_);
+  const timeoutMs = [
+    "getAPIVersion",
+    "getCurrentSpaceName",
+    "getCurrentSpaceID",
+    "getAllSpaces",
+    "getSpaceSnapshot",
+  ].includes(command)
+    ? 3000
+    : 10000;
+  const script = makeSpaceAPIJXA(requestID, command, arguments_, timeoutMs);
   const { stdout, stderr } = await execFileAsync("/usr/bin/osascript", ["-l", "JavaScript", "-e", script], {
     maxBuffer: 10 * 1024 * 1024,
   });
-  return (stdout.trim() ? stdout : stderr).trimEnd();
+  const output = (stdout.trim() ? stdout : stderr).trimEnd();
+  const response = JSON.parse(output) as { apiVersion?: string; result?: string };
+  if (response.apiVersion) {
+    const apiMajor = Number.parseInt(response.apiVersion.split(".")[0] ?? "", 10);
+    if (
+      compareVersions(response.apiVersion, MINIMUM_DESKTOP_RENAMER_API_VERSION) < 0 ||
+      apiMajor !== SUPPORTED_DESKTOP_RENAMER_API_MAJOR
+    ) {
+      throw new Error(
+        `DesktopRenamer API major version ${SUPPORTED_DESKTOP_RENAMER_API_MAJOR} is required (found ${response.apiVersion})`,
+      );
+    }
+  }
+  return response.result ?? "";
 }
 
-function makeSpaceAPIJXA(requestID: string, command: string, arguments_: Record<string, string>): string {
+function makeSpaceAPIJXA(
+  requestID: string,
+  command: string,
+  arguments_: Record<string, string>,
+  timeoutMs: number,
+): string {
   const requestObject = { requestID, command, arguments: arguments_ };
   return `
 ObjC.import('Foundation');
@@ -280,9 +286,9 @@ userInfo.setObjectForKey(requestObject.requestID, 'requestID');
 userInfo.setObjectForKey(requestObject.command, 'command');
 userInfo.setObjectForKey(JSON.stringify(requestObject.arguments), 'argumentsJSON');
 center.postNotificationNameObjectUserInfoDeliverImmediately('${SPACE_API_COMMAND_NOTIFICATION}', undefined, userInfo, true);
-const deadline = Date.now() + 10000;
+const deadline = Date.now() + ${timeoutMs};
 while (!finished && Date.now() < deadline) {
-  $.NSRunLoop.currentRunLoop.runUntilDate($.NSDate.dateWithTimeIntervalSinceNow(0.05));
+  $.NSRunLoop.currentRunLoop.runUntilDate($.NSDate.dateWithTimeIntervalSinceNow(0.01));
 }
 center.removeObserver(observer);
 if (!response) throw new Error('SpaceAPI request timed out.');
@@ -292,7 +298,8 @@ if (!(success === true || String(success) === 'true' || String(success) === '1')
   throw new Error(String(error || 'SpaceAPI command failed.'));
 }
 const result = ObjC.unwrap(response.result);
-console.log(String(result || ''));
+const apiVersion = ObjC.unwrap(response.apiVersion);
+console.log(JSON.stringify({apiVersion: apiVersion || null, result: result || ''}));
 `;
 }
 
