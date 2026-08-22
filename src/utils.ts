@@ -1,6 +1,11 @@
 import { showToast, Toast, open, environment, LaunchType, getApplications } from "@raycast/api";
 import { runAppleScript } from "@raycast/utils";
 
+export const MINIMUM_DESKTOP_RENAMER_API_VERSION = "1.0.0";
+const SUPPORTED_DESKTOP_RENAMER_API_MAJOR = 1;
+
+let apiCompatibilityCheck: Promise<void> | null = null;
+
 export function escapeAppleScriptString(str: string): string {
   return str.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
@@ -97,11 +102,43 @@ export async function runDesktopRenamerScript(scriptContent: string, errorMessag
     if (!isRunning) {
       throw new Error("NotRunning");
     }
+    await ensureCompatibleAPI();
     return await runAppleScript(scriptContent);
   } catch (error) {
     await handleDesktopRenamerError(error, errorMessage);
     throw error;
   }
+}
+
+async function ensureCompatibleAPI() {
+  if (!apiCompatibilityCheck) {
+    apiCompatibilityCheck = (async () => {
+      const version = String(await runAppleScript('tell application "DesktopRenamer" to get api version')).trim();
+      const apiMajor = Number.parseInt(version.split(".")[0] ?? "", 10);
+      if (
+        compareVersions(version, MINIMUM_DESKTOP_RENAMER_API_VERSION) < 0 ||
+        apiMajor !== SUPPORTED_DESKTOP_RENAMER_API_MAJOR
+      ) {
+        throw new Error(
+          `DesktopRenamer API major version ${SUPPORTED_DESKTOP_RENAMER_API_MAJOR} is required (found ${version || "unknown"})`,
+        );
+      }
+    })().catch((error) => {
+      apiCompatibilityCheck = null;
+      throw error;
+    });
+  }
+  return apiCompatibilityCheck;
+}
+
+function compareVersions(left: string, right: string): number {
+  const leftParts = left.split(".").map((part) => Number.parseInt(part, 10) || 0);
+  const rightParts = right.split(".").map((part) => Number.parseInt(part, 10) || 0);
+  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
+    const difference = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
 }
 
 export async function runDesktopRenamerCommand(command: string, errorMessage = "Is DesktopRenamer running?") {
