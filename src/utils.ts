@@ -263,20 +263,18 @@ const center = $.NSDistributedNotificationCenter.defaultCenter;
 const resultName = '${SPACE_API_RESULT_NOTIFICATION}';
 let response = null;
 let finished = false;
-ObjC.registerSubclass({
-  name: 'DesktopRenamerSpaceAPIObserver',
-  methods: {
-    'receive:': { types: 'void@:@', implementation: function(notification) {
-      const info = ObjC.unwrap(notification.userInfo);
-      if (info && String(info.requestID) === requestObject.requestID) {
-        response = info;
-        finished = true;
-      }
-    }}
+const observer = center.addObserverForNameObjectQueueUsingBlock(
+  resultName,
+  undefined,
+  undefined,
+  function(notification) {
+    const info = ObjC.unwrap(notification.userInfo);
+    if (info && String(info.requestID) === requestObject.requestID) {
+      response = info;
+      finished = true;
+    }
   }
-});
-const observer = $.DesktopRenamerSpaceAPIObserver.alloc.init;
-center.addObserverSelectorNameObjectSuspensionBehavior(observer, 'receive:', resultName, undefined, 4);
+);
 const userInfo = $.NSMutableDictionary.dictionary;
 userInfo.setObjectForKey(requestObject.requestID, 'requestID');
 userInfo.setObjectForKey(requestObject.command, 'command');
