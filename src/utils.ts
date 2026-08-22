@@ -277,12 +277,12 @@ ObjC.registerSubclass({
   }
 });
 const observer = $.DesktopRenamerSpaceAPIObserver.alloc.init;
-center.addObserverSelectorNameObjectSuspensionBehavior(observer, 'receive:', resultName, null, 4);
+center.addObserverSelectorNameObjectSuspensionBehavior(observer, 'receive:', resultName, undefined, 4);
 const userInfo = $.NSMutableDictionary.dictionary;
 userInfo.setObjectForKey(requestObject.requestID, 'requestID');
 userInfo.setObjectForKey(requestObject.command, 'command');
 userInfo.setObjectForKey(JSON.stringify(requestObject.arguments), 'argumentsJSON');
-center.postNotificationNameObjectUserInfoDeliverImmediately('${SPACE_API_COMMAND_NOTIFICATION}', null, userInfo, true);
+center.postNotificationNameObjectUserInfoDeliverImmediately('${SPACE_API_COMMAND_NOTIFICATION}', undefined, userInfo, true);
 const deadline = Date.now() + 10000;
 while (!finished && Date.now() < deadline) {
   $.NSRunLoop.currentRunLoop.runUntilDate($.NSDate.dateWithTimeIntervalSinceNow(0.05));
