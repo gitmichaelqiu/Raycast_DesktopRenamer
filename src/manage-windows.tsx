@@ -141,9 +141,19 @@ export default function Command() {
     });
   }, [data, rawWindows]);
 
-  // Separate windows into staged and unstaged
-  const unstagedWindows = allWindows.filter((w) => !stagedMoves.has(actionKey(w)));
-  const stagedWindowsArray = Array.from(stagedMoves.values());
+  const quittingPIDs = new Set(
+    Array.from(stagedMoves.values())
+      .filter((action) => action.type === "quit")
+      .map((action) => action.window.pid),
+  );
+  const visibleWindows = allWindows.filter((window) => !quittingPIDs.has(window.pid));
+
+  // Separate windows into staged and unstaged. Keep the app-level quit action
+  // visible while hiding every other window belonging to that application.
+  const unstagedWindows = visibleWindows.filter((w) => !stagedMoves.has(actionKey(w)));
+  const stagedWindowsArray = Array.from(stagedMoves.values()).filter(
+    (action) => action.type === "quit" || !quittingPIDs.has(action.window.pid),
+  );
 
   const windowsBySpace = new Map<string, WindowEntry[]>();
   for (const w of unstagedWindows) {
@@ -158,6 +168,11 @@ export default function Command() {
     targetSpace?: SpaceGroup,
   ) {
     const newStaged = new Map(stagedMoves);
+    if (type === "quit") {
+      for (const [key, action] of newStaged) {
+        if (action.window.pid === window.pid) newStaged.delete(key);
+      }
+    }
     newStaged.set(actionKey(window), { window, type, targetSpace });
     setStagedMoves(newStaged);
   }
