@@ -6,6 +6,7 @@ export interface Space {
   id: string;
   name: string;
   displayID: string;
+  displayName: string;
   num: number;
   isFullscreen: boolean | undefined;
   appPath?: string;
@@ -18,6 +19,7 @@ interface SpaceSnapshot {
     id: string;
     name: string;
     displayID: string;
+    displayName?: string;
     number: number;
     isFullscreen: boolean;
     appPath?: string;
@@ -57,6 +59,7 @@ export function useSpaces() {
         id: space.id,
         name: space.name || "Unknown",
         displayID: space.displayID || "Main",
+        displayName: space.displayName || space.displayID || "Main",
         num: space.number,
         isFullscreen: space.isFullscreen,
         appPath: space.appPath,
@@ -77,6 +80,7 @@ export function useSpaces() {
           id: parts[0],
           name: parts[1] || "Unknown",
           displayID: parts[2] || "Main",
+          displayName: parts[2] || "Main",
           num: parseInt(parts[3] || "0", 10),
           // parts[4] (isFullscreen) is only present in the 5-field format.
           // When absent (legacy 4-field format), leave undefined as unknown.
@@ -89,9 +93,9 @@ export function useSpaces() {
   const groupedSpaces =
     spaces.reduce(
       (acc, space) => {
-        const group = acc[space.displayID] || [];
+        const group = acc[space.displayName] || [];
         group.push(space);
-        acc[space.displayID] = group;
+        acc[space.displayName] = group;
         return acc;
       },
       {} as Record<string, Space[]>,
