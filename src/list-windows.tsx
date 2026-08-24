@@ -287,25 +287,18 @@ export default function Command() {
                           shortcut={{ modifiers: ["cmd"], key: "t" }}
                           onAction={() => moveToCurrentDesktop(entry)}
                         />
-                        <ActionPanel.Submenu
+                        <Action.Push
                           title="Move to Desktop…"
                           icon={Icon.List}
                           shortcut={{ modifiers: ["cmd", "shift"], key: "t" }}
-                        >
-                          {allSpaces
-                            .filter((s) => s.id !== entry.space.id && isMoveTarget(s))
-                            .map((targetSpace) => (
-                              <Action
-                                key={targetSpace.id}
-                                title={
-                                  currentSpaceIDs.has(targetSpace.id)
-                                    ? `Current Desktop · ${targetSpace.name}`
-                                    : targetSpace.name
-                                }
-                                onAction={() => moveToDesktop(entry, targetSpace)}
-                              />
-                            ))}
-                        </ActionPanel.Submenu>
+                          target={
+                            <MoveToDesktopView
+                              spaces={allSpaces.filter((s) => s.id !== entry.space.id && isMoveTarget(s))}
+                              currentSpaceIDs={currentSpaceIDs}
+                              onMove={(targetSpace) => moveToDesktop(entry, targetSpace)}
+                            />
+                          }
+                        />
                       </ActionPanel.Section>
                       <ActionPanel.Section title="Window Actions">
                         <Action
@@ -360,6 +353,35 @@ export default function Command() {
             </List.Section>
           );
         })}
+    </List>
+  );
+}
+
+function MoveToDesktopView({
+  spaces,
+  currentSpaceIDs,
+  onMove,
+}: {
+  spaces: SpaceGroup[];
+  currentSpaceIDs: Set<string>;
+  onMove: (space: SpaceGroup) => void;
+}) {
+  return (
+    <List searchBarPlaceholder="Search desktops...">
+      {spaces.map((space) => (
+        <List.Item
+          key={space.id}
+          title={space.name}
+          subtitle={`${space.displayID} · Space ${space.num}`}
+          icon={Icon.Desktop}
+          accessories={currentSpaceIDs.has(space.id) ? [{ tag: { value: "Current", color: Color.Blue } }] : []}
+          actions={
+            <ActionPanel>
+              <Action title="Move Window" icon={Icon.ArrowRight} onAction={() => onMove(space)} />
+            </ActionPanel>
+          }
+        />
+      ))}
     </List>
   );
 }
