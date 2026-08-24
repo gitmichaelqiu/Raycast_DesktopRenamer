@@ -10,12 +10,6 @@ import { isMoveTarget, useSpaces, Space, RenameSpaceForm } from "./spaces";
 export default function Command() {
   const { spaces, groupedSpaces, currentId, isLoading, revalidate } = useSpaces();
   const currentSpaceId = currentId ? currentId.split(",")[0]?.trim() : null;
-  const currentSpaceIds = new Set(
-    (currentId ?? "")
-      .split(",")
-      .map((spaceId) => spaceId.trim())
-      .filter(Boolean),
-  );
   const currentSpace = currentSpaceId ? spaces.find((s) => s.id === currentSpaceId) : undefined;
 
   async function moveWindow(space: Space) {
@@ -58,9 +52,7 @@ export default function Command() {
                 <List.Item
                   key={space.id}
                   title={space.name}
-                  subtitle={
-                    currentSpaceIds.has(space.id) ? `Current Desktop · Space ${space.num}` : `Space ${space.num}`
-                  }
+                  subtitle={`Space ${space.num}`}
                   icon={{ source: Icon.Window }}
                   actions={
                     <ActionPanel>
