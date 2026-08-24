@@ -287,18 +287,43 @@ export default function Command() {
                           shortcut={{ modifiers: ["cmd"], key: "t" }}
                           onAction={() => moveToCurrentDesktop(entry)}
                         />
-                        <Action.Push
+                        <ActionPanel.Submenu
                           title="Move to Desktop…"
                           icon={Icon.List}
                           shortcut={{ modifiers: ["cmd", "shift"], key: "t" }}
-                          target={
-                            <MoveToDesktopView
-                              spaces={allSpaces.filter((s) => s.id !== entry.space.id && isMoveTarget(s))}
-                              currentSpaceIDs={currentSpaceIDs}
-                              onMove={(targetSpace) => moveToDesktop(entry, targetSpace)}
-                            />
-                          }
-                        />
+                        >
+                          {(() => {
+                            const moveTargets = allSpaces.filter((s) => s.id !== entry.space.id && isMoveTarget(s));
+                            const currentTargets = moveTargets.filter((s) => currentSpaceIDs.has(s.id));
+                            const otherTargets = moveTargets.filter((s) => !currentSpaceIDs.has(s.id));
+                            return (
+                              <>
+                                {currentTargets.length > 0 && (
+                                  <ActionPanel.Section title="Current Desktops">
+                                    {currentTargets.map((targetSpace) => (
+                                      <Action
+                                        key={targetSpace.id}
+                                        title={targetSpace.name}
+                                        onAction={() => moveToDesktop(entry, targetSpace)}
+                                      />
+                                    ))}
+                                  </ActionPanel.Section>
+                                )}
+                                {otherTargets.length > 0 && (
+                                  <ActionPanel.Section title="Other Desktops">
+                                    {otherTargets.map((targetSpace) => (
+                                      <Action
+                                        key={targetSpace.id}
+                                        title={targetSpace.name}
+                                        onAction={() => moveToDesktop(entry, targetSpace)}
+                                      />
+                                    ))}
+                                  </ActionPanel.Section>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </ActionPanel.Submenu>
                       </ActionPanel.Section>
                       <ActionPanel.Section title="Window Actions">
                         <Action
@@ -353,35 +378,6 @@ export default function Command() {
             </List.Section>
           );
         })}
-    </List>
-  );
-}
-
-function MoveToDesktopView({
-  spaces,
-  currentSpaceIDs,
-  onMove,
-}: {
-  spaces: SpaceGroup[];
-  currentSpaceIDs: Set<string>;
-  onMove: (space: SpaceGroup) => void;
-}) {
-  return (
-    <List searchBarPlaceholder="Search desktops...">
-      {spaces.map((space) => (
-        <List.Item
-          key={space.id}
-          title={space.name}
-          subtitle={`${space.displayID} · Space ${space.num}`}
-          icon={Icon.Desktop}
-          accessories={currentSpaceIDs.has(space.id) ? [{ tag: { value: "Current", color: Color.Blue } }] : []}
-          actions={
-            <ActionPanel>
-              <Action title="Move Window" icon={Icon.ArrowRight} onAction={() => onMove(space)} />
-            </ActionPanel>
-          }
-        />
-      ))}
     </List>
   );
 }
