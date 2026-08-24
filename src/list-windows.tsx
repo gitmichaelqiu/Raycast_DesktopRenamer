@@ -298,7 +298,11 @@ export default function Command() {
                               <Action
                                 key={targetSpace.id}
                                 title={targetSpace.name}
-                                icon={currentSpaceIDs.has(targetSpace.id) ? Icon.Checkmark : undefined}
+                                icon={
+                                  currentSpaceIDs.has(targetSpace.id)
+                                    ? { source: Icon.Checkmark, tintColor: Color.Blue }
+                                    : undefined
+                                }
                                 onAction={() => moveToDesktop(entry, targetSpace)}
                               />
                             ))}
