@@ -292,37 +292,16 @@ export default function Command() {
                           icon={Icon.List}
                           shortcut={{ modifiers: ["cmd", "shift"], key: "t" }}
                         >
-                          {(() => {
-                            const moveTargets = allSpaces.filter((s) => s.id !== entry.space.id && isMoveTarget(s));
-                            const currentTargets = moveTargets.filter((s) => currentSpaceIDs.has(s.id));
-                            const otherTargets = moveTargets.filter((s) => !currentSpaceIDs.has(s.id));
-                            return (
-                              <>
-                                {currentTargets.length > 0 && (
-                                  <ActionPanel.Section title="Current Desktops">
-                                    {currentTargets.map((targetSpace) => (
-                                      <Action
-                                        key={targetSpace.id}
-                                        title={targetSpace.name}
-                                        onAction={() => moveToDesktop(entry, targetSpace)}
-                                      />
-                                    ))}
-                                  </ActionPanel.Section>
-                                )}
-                                {otherTargets.length > 0 && (
-                                  <ActionPanel.Section title="Other Desktops">
-                                    {otherTargets.map((targetSpace) => (
-                                      <Action
-                                        key={targetSpace.id}
-                                        title={targetSpace.name}
-                                        onAction={() => moveToDesktop(entry, targetSpace)}
-                                      />
-                                    ))}
-                                  </ActionPanel.Section>
-                                )}
-                              </>
-                            );
-                          })()}
+                          {allSpaces
+                            .filter((s) => s.id !== entry.space.id && isMoveTarget(s))
+                            .map((targetSpace) => (
+                              <Action
+                                key={targetSpace.id}
+                                title={targetSpace.name}
+                                icon={currentSpaceIDs.has(targetSpace.id) ? Icon.Checkmark : undefined}
+                                onAction={() => moveToDesktop(entry, targetSpace)}
+                              />
+                            ))}
                         </ActionPanel.Submenu>
                       </ActionPanel.Section>
                       <ActionPanel.Section title="Window Actions">
