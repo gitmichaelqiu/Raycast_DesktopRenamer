@@ -93,9 +93,21 @@ export default function Command() {
     `);
     return parseWindowData(result);
   });
+  const {
+    data: currentSpaces,
+    isLoading: isLoadingCurrentSpaces,
+    revalidate: revalidateCurrentSpaces,
+  } = usePromise(async () => {
+    try {
+      return await getCurrentSpacesByDisplay();
+    } catch {
+      return { spacesByDisplay: {} };
+    }
+  });
   const allSpaces = data?.spaces ?? [];
   const rawWindows = data?.windows ?? [];
   const allWindows = rawWindows.filter((window) => !terminatingPIDs.has(window.pid));
+  const currentSpaceIDs = new Set(Object.values(currentSpaces?.spacesByDisplay ?? {}));
 
   useEffect(() => {
     if (!data) return;
@@ -164,6 +176,7 @@ export default function Command() {
         title: `Moved "${entry.title}" to current desktop`,
       });
       revalidate();
+      revalidateCurrentSpaces();
     } catch {
       // Error handled by utils
     }
@@ -197,6 +210,7 @@ export default function Command() {
         title: `Moved "${entry.title}" to ${targetSpace.name}`,
       });
       revalidate();
+      revalidateCurrentSpaces();
     } catch {
       // Error handled by utils
     }
@@ -230,7 +244,7 @@ export default function Command() {
 
   return (
     <List
-      isLoading={isLoading}
+      isLoading={isLoading || isLoadingCurrentSpaces}
       searchBarPlaceholder="Search windows..."
       searchBarAccessory={
         <List.Dropdown tooltip="Filter by Desktop" onChange={setFilterSpaceId} defaultValue="all">
@@ -283,6 +297,11 @@ export default function Command() {
                               <Action
                                 key={targetSpace.id}
                                 title={targetSpace.name}
+                                icon={
+                                  currentSpaceIDs.has(targetSpace.id)
+                                    ? { source: Icon.Circle, tintColor: Color.Blue }
+                                    : undefined
+                                }
                                 onAction={() => moveToDesktop(entry, targetSpace)}
                               />
                             ))}
