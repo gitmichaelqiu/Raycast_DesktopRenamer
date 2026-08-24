@@ -208,7 +208,16 @@ export async function getCurrentSpacesByDisplay(): Promise<CurrentSpaceSnapshot>
 }
 
 export async function restoreSpacesByDisplay(snapshot: CurrentSpaceSnapshot): Promise<void> {
-  for (const spaceID of Object.values(snapshot.spacesByDisplay)) {
+  let currentSpaces: CurrentSpaceSnapshot | undefined;
+  try {
+    currentSpaces = await getCurrentSpacesByDisplay();
+  } catch {
+    // The restore itself remains authoritative if the read-back is unavailable.
+  }
+
+  for (const [displayID, spaceID] of Object.entries(snapshot.spacesByDisplay)) {
+    if (currentSpaces?.spacesByDisplay[displayID] === spaceID) continue;
+
     await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(spaceID)}"`);
     await new Promise((resolve) => setTimeout(resolve, 600));
   }
