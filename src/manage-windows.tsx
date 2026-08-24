@@ -6,6 +6,8 @@ import {
   runDesktopRenamerScript,
   escapeAppleScriptString,
   moveSpecificWindowToSpace,
+  getCurrentSpacesByDisplay,
+  restoreSpacesByDisplay,
 } from "./utils";
 import { isMoveTarget } from "./spaces";
 
@@ -201,14 +203,7 @@ export default function Command() {
 
     try {
       const prefs = getPreferenceValues<Preferences>();
-      let originalSpaceId: string | null = null;
-      if (prefs.returnToOriginalSpace) {
-        const currentIdsRaw = await runDesktopRenamerCommand("get current space id");
-        const currentIds = currentIdsRaw.split(",").map((s: string) => s.trim());
-        if (currentIds[0]) {
-          originalSpaceId = currentIds[0];
-        }
-      }
+      const originalSpaces = prefs.returnToOriginalSpace ? await getCurrentSpacesByDisplay() : undefined;
 
       // Group moves by the window's SOURCE space to minimize space switching.
       const actionsBySource = new Map<string, StagedAction[]>();
@@ -261,10 +256,9 @@ export default function Command() {
       }
 
       // Finally, return to the desktop where the user started the command
-      if (originalSpaceId && prefs.returnToOriginalSpace) {
+      if (originalSpaces) {
         toast.message = "Returning to original desktop...";
-        await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(originalSpaceId)}"`);
-        await delay(400);
+        await restoreSpacesByDisplay(originalSpaces);
       }
 
       toast.style = Toast.Style.Success;

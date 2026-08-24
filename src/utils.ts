@@ -169,6 +169,51 @@ export async function runDesktopRenamerCommand(command: string, errorMessage = "
   return await runDesktopRenamerScript(`tell application "DesktopRenamer" to ${command}`, errorMessage);
 }
 
+export interface CurrentSpaceSnapshot {
+  spacesByDisplay: Record<string, string>;
+}
+
+export async function getCurrentSpacesByDisplay(): Promise<CurrentSpaceSnapshot> {
+  const result = await runDesktopRenamerScript(`
+    tell application "DesktopRenamer"
+      set allSpaces to get all spaces
+      set currentName to get current space name
+      set currentId to get current space id
+      return allSpaces & "~~~" & currentName & "~~~" & currentId
+    end tell
+  `);
+
+  if (result.trimStart().startsWith("{")) {
+    const snapshot = JSON.parse(result) as {
+      currentSpaceIDs?: string[];
+      spaces?: Array<{ id: string; displayID?: string }>;
+    };
+    const spacesByID = new Map((snapshot.spaces ?? []).map((space) => [space.id, space.displayID ?? "Main"]));
+    return {
+      spacesByDisplay: Object.fromEntries(
+        (snapshot.currentSpaceIDs ?? []).flatMap((spaceID) => {
+          const displayID = spacesByID.get(spaceID);
+          return displayID ? [[displayID, spaceID]] : [];
+        }),
+      ),
+    };
+  }
+
+  const [, , currentIDs] = result.split("~~~");
+  const ids = (currentIDs ?? "")
+    .split(",")
+    .map((spaceID) => spaceID.trim())
+    .filter(Boolean);
+  return { spacesByDisplay: Object.fromEntries(ids.map((spaceID, index) => [`display-${index}`, spaceID])) };
+}
+
+export async function restoreSpacesByDisplay(snapshot: CurrentSpaceSnapshot): Promise<void> {
+  for (const spaceID of Object.values(snapshot.spacesByDisplay)) {
+    await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(spaceID)}"`);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+  }
+}
+
 function parseSpaceAPICommand(command: string): { name: string; arguments: Record<string, string> } | null {
   const quoted = (value: string) => value.replace(/\\"/g, '"').replace(/\\\\/g, "\\");
   if (command === "get api version") return { name: "getAPIVersion", arguments: {} };

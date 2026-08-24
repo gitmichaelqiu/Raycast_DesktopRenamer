@@ -1,5 +1,10 @@
-import { List, ActionPanel, Action, Icon, showToast, Toast } from "@raycast/api";
-import { runDesktopRenamerCommand, escapeAppleScriptString } from "./utils";
+import { List, ActionPanel, Action, Icon, showToast, Toast, getPreferenceValues } from "@raycast/api";
+import {
+  runDesktopRenamerCommand,
+  escapeAppleScriptString,
+  getCurrentSpacesByDisplay,
+  restoreSpacesByDisplay,
+} from "./utils";
 import { isMoveTarget, useSpaces, Space, RenameSpaceForm } from "./spaces";
 
 export default function Command() {
@@ -9,6 +14,8 @@ export default function Command() {
 
   async function moveWindow(space: Space) {
     try {
+      const preferences = getPreferenceValues<{ returnToOriginalSpace?: boolean }>();
+      const originalSpaces = preferences.returnToOriginalSpace ? await getCurrentSpacesByDisplay() : undefined;
       const sanitizedId = escapeAppleScriptString(space.id);
       const isCurrentFullscreen = currentSpace?.isFullscreen;
 
@@ -20,6 +27,10 @@ export default function Command() {
 
       if (isCurrentFullscreen === true) {
         await new Promise((resolve) => setTimeout(resolve, 1700));
+      }
+
+      if (originalSpaces) {
+        await restoreSpacesByDisplay(originalSpaces);
       }
 
       await showToast({ style: Toast.Style.Success, title: `Moved window to ${space.name}` });

@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import {
   runDesktopRenamerCommand,
   runDesktopRenamerScript,
-  escapeAppleScriptString,
   moveSpecificWindowToSpace,
+  getCurrentSpacesByDisplay,
+  restoreSpacesByDisplay,
 } from "./utils";
 import { isMoveTarget } from "./spaces";
 
@@ -132,14 +133,13 @@ export default function Command() {
 
   async function moveToCurrentDesktop(entry: WindowEntry) {
     try {
-      // Remember where we are now.
-      const currentIdsRaw = await runDesktopRenamerCommand("get current space id");
-      const currentIds = currentIdsRaw.split(",").map((s: string) => s.trim());
-      if (!currentIds[0]) {
+      const prefs = getPreferenceValues<Preferences>();
+      const originalSpaces = await getCurrentSpacesByDisplay();
+      const targetId = Object.values(originalSpaces.spacesByDisplay)[0];
+      if (!targetId) {
         await showToast({ style: Toast.Style.Failure, title: "Could not determine current desktop" });
         return;
       }
-      const targetId = currentIds[0];
       const targetSpace = allSpaces.find((space) => space.id === targetId);
       if (!targetSpace || !isMoveTarget(targetSpace)) {
         await showToast({ style: Toast.Style.Failure, title: "Current space cannot receive moved windows" });
@@ -157,8 +157,9 @@ export default function Command() {
         targetSpaceID: targetId,
       });
       await delay(entry.space.isFullscreen === false ? 600 : 1750); // Wait for the backend's drag operation to complete
-      // Switch back to the original (current) desktop.
-      await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(targetId)}"`);
+      if (prefs.returnToOriginalSpace) {
+        await restoreSpacesByDisplay(originalSpaces);
+      }
       await showToast({
         style: Toast.Style.Success,
         title: `Moved "${entry.title}" to current desktop`,
@@ -177,14 +178,7 @@ export default function Command() {
       }
 
       const prefs = getPreferenceValues<Preferences>();
-      let originalSpaceId: string | null = null;
-      if (prefs.returnToOriginalSpace) {
-        const currentIdsRaw = await runDesktopRenamerCommand("get current space id");
-        const currentIds = currentIdsRaw.split(",").map((s: string) => s.trim());
-        if (currentIds[0]) {
-          originalSpaceId = currentIds[0];
-        }
-      }
+      const originalSpaces = prefs.returnToOriginalSpace ? await getCurrentSpacesByDisplay() : undefined;
 
       await moveSpecificWindowToSpace({
         windowID: entry.windowID,
@@ -193,9 +187,9 @@ export default function Command() {
         targetSpaceID: targetSpace.id,
       });
 
-      if (originalSpaceId && originalSpaceId !== targetSpace.id) {
+      if (originalSpaces) {
         await delay(entry.space.isFullscreen === false ? 600 : 1750); // Wait for the backend's drag operation to complete
-        await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(originalSpaceId)}"`);
+        await restoreSpacesByDisplay(originalSpaces);
       } else if (entry.space.isFullscreen !== false) {
         await delay(1200); // Wait for un-fullscreen transition
       }
