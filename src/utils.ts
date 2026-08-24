@@ -154,6 +154,12 @@ function compareVersions(left: string, right: string): number {
 }
 
 export async function runDesktopRenamerCommand(command: string, errorMessage = "Is DesktopRenamer running?") {
+  if (!(await isDesktopRenamerInstalled())) {
+    const error = new Error("NotInstalled");
+    await handleDesktopRenamerError(error, errorMessage);
+    throw error;
+  }
+
   const method = communicationMethod();
   if (method !== "applescript") {
     try {
@@ -172,6 +178,9 @@ export async function runDesktopRenamerCommand(command: string, errorMessage = "
 export interface CurrentSpaceSnapshot {
   spacesByDisplay: Record<string, string>;
 }
+
+const SPACE_SWITCH_POLL_INTERVAL_MS = 100;
+const SPACE_SWITCH_TIMEOUT_MS = 2000;
 
 export async function getCurrentSpacesByDisplay(): Promise<CurrentSpaceSnapshot> {
   const result = await runDesktopRenamerScript(`
@@ -219,8 +228,32 @@ export async function restoreSpacesByDisplay(snapshot: CurrentSpaceSnapshot): Pr
     if (currentSpaces?.spacesByDisplay[displayID] === spaceID) continue;
 
     await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(spaceID)}"`);
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    await waitForSpaceToBecomeCurrent(spaceID);
   }
+}
+
+export async function focusWindowOnSpace(windowID: number, pid: number, spaceID: string): Promise<void> {
+  await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(spaceID)}"`);
+  await waitForSpaceToBecomeCurrent(spaceID);
+  await runDesktopRenamerCommand(`focus window ${windowID} pid ${pid}`);
+}
+
+async function waitForSpaceToBecomeCurrent(spaceID: string): Promise<void> {
+  const deadline = Date.now() + SPACE_SWITCH_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    try {
+      const currentSpaces = await getCurrentSpacesByDisplay();
+      if (Object.values(currentSpaces.spacesByDisplay).includes(spaceID)) return;
+    } catch {
+      // Keep polling. The space switch may still be settling, and the next
+      // read can succeed after Mission Control finishes updating its state.
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, SPACE_SWITCH_POLL_INTERVAL_MS));
+  }
+
+  throw new Error(`DesktopRenamer did not activate space ${spaceID} in time.`);
 }
 
 function parseSpaceAPICommand(command: string): { name: string; arguments: Record<string, string> } | null {

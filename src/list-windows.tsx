@@ -7,6 +7,7 @@ import {
   moveSpecificWindowToSpace,
   getCurrentSpacesByDisplay,
   restoreSpacesByDisplay,
+  focusWindowOnSpace,
 } from "./utils";
 import { isMoveTarget } from "./spaces";
 
@@ -134,7 +135,7 @@ export default function Command() {
 
   async function switchToWindow(entry: WindowEntry) {
     try {
-      await runDesktopRenamerCommand(`focus window ${entry.windowID} pid ${entry.pid}`);
+      await focusWindowOnSpace(entry.windowID, entry.pid, entry.space.id);
       await showToast({ style: Toast.Style.Success, title: `Switched to ${entry.title}` });
       await popToRoot();
     } catch {
@@ -146,7 +147,7 @@ export default function Command() {
     try {
       const prefs = getPreferenceValues<Preferences>();
       const originalSpaces = await getCurrentSpacesByDisplay();
-      const targetId = Object.values(originalSpaces.spacesByDisplay)[0];
+      const targetId = (await runDesktopRenamerCommand("get current space id")).trim();
       if (!targetId) {
         await showToast({ style: Toast.Style.Failure, title: "Could not determine current desktop" });
         return;
