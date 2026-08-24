@@ -291,9 +291,10 @@ export default function Command() {
                           icon={Icon.List}
                           shortcut={{ modifiers: ["cmd", "shift"], key: "t" }}
                         >
-                          {allSpaces
-                            .filter((s) => s.id !== entry.space.id && isMoveTarget(s))
-                            .map((targetSpace) => (
+                          {(() => {
+                            const moveTargets = allSpaces.filter((s) => s.id !== entry.space.id && isMoveTarget(s));
+                            const displayIDs = Array.from(new Set(moveTargets.map((space) => space.displayID)));
+                            const makeAction = (targetSpace: SpaceGroup) => (
                               <Action
                                 key={targetSpace.id}
                                 title={targetSpace.name}
@@ -304,7 +305,18 @@ export default function Command() {
                                 }
                                 onAction={() => moveToDesktop(entry, targetSpace)}
                               />
-                            ))}
+                            );
+
+                            if (displayIDs.length <= 1) {
+                              return moveTargets.map(makeAction);
+                            }
+
+                            return displayIDs.map((displayID) => (
+                              <ActionPanel.Section key={displayID} title={displayID}>
+                                {moveTargets.filter((space) => space.displayID === displayID).map(makeAction)}
+                              </ActionPanel.Section>
+                            ));
+                          })()}
                         </ActionPanel.Submenu>
                       </ActionPanel.Section>
                       <ActionPanel.Section title="Window Actions">
