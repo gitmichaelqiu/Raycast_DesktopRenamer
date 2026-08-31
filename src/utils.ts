@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 
 export const MINIMUM_DESKTOP_RENAMER_API_VERSION = "1.0.0";
-export const STRUCTURED_DESKTOP_RENAMER_API_VERSION = "1.2.0";
+export const STRUCTURED_DESKTOP_RENAMER_API_VERSION = "1.0.0";
 export const DESKTOP_RENAMER_JSON_RPC_VERSION = "2.0";
 const SUPPORTED_DESKTOP_RENAMER_API_MAJOR = 1;
 const MAX_STRUCTURED_PAYLOAD_BYTES = 1_048_576;
