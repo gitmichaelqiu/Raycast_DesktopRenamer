@@ -51,7 +51,15 @@ const execFileAsync = promisify(execFile);
 let structuredAPIInfoLookup: Promise<SpaceAPIInfo> | null = null;
 let structuredAPIMaxPayloadBytes = MAX_STRUCTURED_PAYLOAD_BYTES;
 
-export async function runDesktopRenamerScript(scriptContent: string, errorMessage = "Is DesktopRenamer running?") {
+export interface DesktopRenamerRequestOptions {
+  showErrorToast?: boolean;
+}
+
+export async function runDesktopRenamerScript(
+  scriptContent: string,
+  errorMessage = "Is DesktopRenamer running?",
+  options: DesktopRenamerRequestOptions = {},
+) {
   try {
     const method = communicationMethod();
     await requireDesktopRenamerInstalled();
@@ -74,7 +82,7 @@ export async function runDesktopRenamerScript(scriptContent: string, errorMessag
     }
     return await runAppleScript(scriptContent);
   } catch (error) {
-    await handleDesktopRenamerError(error, errorMessage);
+    if (options.showErrorToast !== false) await handleDesktopRenamerError(error, errorMessage);
     throw error;
   }
 }
@@ -338,13 +346,14 @@ export async function runDesktopRenamerMethod<M extends SpaceAPIMethod>(
   command: M,
   arguments_: SpaceAPIMethodArguments[M] = {} as SpaceAPIMethodArguments[M],
   errorMessage = "Is DesktopRenamer running?",
+  options: DesktopRenamerRequestOptions = {},
 ): Promise<SpaceAPIMethodResults[M]> {
   let parameters: SpaceAPIParameters;
   try {
     parameters = normalizeMethodArguments(command, arguments_);
     await requireDesktopRenamerInstalled();
   } catch (error) {
-    await handleDesktopRenamerError(error, errorMessage);
+    if (options.showErrorToast !== false) await handleDesktopRenamerError(error, errorMessage);
     throw error;
   }
 
@@ -356,18 +365,18 @@ export async function runDesktopRenamerMethod<M extends SpaceAPIMethod>(
     try {
       return (await getStructuredAPIInfo()) as SpaceAPIMethodResults[M];
     } catch (error) {
-      await handleDesktopRenamerError(error, errorMessage);
+      if (options.showErrorToast !== false) await handleDesktopRenamerError(error, errorMessage);
       throw error;
     }
   }
 
   const method = communicationMethod();
   if (method === "applescript") {
-    const result = await runDesktopRenamerScript(makeAppleScriptForMethod(command, parameters), errorMessage);
+    const result = await runDesktopRenamerScript(makeAppleScriptForMethod(command, parameters), errorMessage, options);
     try {
       return normalizeDesktopRenamerMethodResult(command, result);
     } catch (error) {
-      await handleDesktopRenamerError(error, errorMessage);
+      if (options.showErrorToast !== false) await handleDesktopRenamerError(error, errorMessage);
       throw error;
     }
   }
@@ -388,11 +397,11 @@ export async function runDesktopRenamerMethod<M extends SpaceAPIMethod>(
         const result = await runAppleScript(makeAppleScriptForMethod(command, parameters));
         return normalizeDesktopRenamerMethodResult(command, result);
       } catch (scriptError) {
-        await handleDesktopRenamerError(scriptError, errorMessage);
+        if (options.showErrorToast !== false) await handleDesktopRenamerError(scriptError, errorMessage);
         throw scriptError;
       }
     }
-    await handleDesktopRenamerError(error, errorMessage);
+    if (options.showErrorToast !== false) await handleDesktopRenamerError(error, errorMessage);
     throw error;
   }
 }

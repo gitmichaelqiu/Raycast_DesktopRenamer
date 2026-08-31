@@ -36,6 +36,10 @@ function getActionLabel(type: StagedAction["type"]): string {
   return type === "move" ? "Move Window" : getWindowActionLabel(type);
 }
 
+function describeBatchError(error: unknown): string {
+  return error instanceof Error && error.message.length > 0 ? error.message : "The action could not be completed.";
+}
+
 export default function Command() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [stagedMoves, setStagedMoves] = useState<Map<string, StagedAction>>(new Map());
@@ -129,6 +133,7 @@ export default function Command() {
       }
 
       let totalExecuted = 0;
+      const failures: string[] = [];
       for (const [sourceId, sourceActions] of actionsBySource.entries()) {
         toast.message = `Processing ${sourceActions[0].window.space.name}...`;
 
@@ -137,36 +142,46 @@ export default function Command() {
         await delay(600); // Give Mission Control time to settle
 
         for (const action of sourceActions) {
-          if (action.type === "move") {
-            if (!action.targetSpace) {
-              throw new Error(`No target desktop was selected for ${action.window.title}.`);
-            }
-            const isFullscreen = action.window.space.isFullscreen;
-            if (isFullscreen === true) {
-              toast.message = `Un-fullscreening and moving ${action.window.title}...`;
+          try {
+            if (action.type === "move") {
+              if (!action.targetSpace) {
+                throw new Error(`No target desktop was selected for ${action.window.title}.`);
+              }
+              const isFullscreen = action.window.space.isFullscreen;
+              if (isFullscreen === true) {
+                toast.message = `Un-fullscreening and moving ${action.window.title}...`;
+              } else {
+                toast.message = `Moving ${action.window.title}...`;
+              }
+
+              await moveSpecificWindowToSpace({
+                windowID: action.window.windowID,
+                pid: action.window.pid,
+                fromSpaceID: action.window.space.id,
+                targetSpaceID: action.targetSpace.id,
+              });
+              await delay(isFullscreen === false ? 500 : 1700); // Wait for un-fullscreen (1.2s) + drag (0.5s)
             } else {
-              toast.message = `Moving ${action.window.title}...`;
+              toast.message = `${getActionLabel(action.type)} on ${action.window.title}...`;
+              await executeWindowAction(
+                action.window.windowID,
+                action.window.pid,
+                action.type,
+                "Failed to execute window action",
+                { showErrorToast: false },
+              );
+              await delay(400);
             }
-
-            await moveSpecificWindowToSpace({
-              windowID: action.window.windowID,
-              pid: action.window.pid,
-              fromSpaceID: action.window.space.id,
-              targetSpaceID: action.targetSpace.id,
-            });
-            await delay(isFullscreen === false ? 500 : 1700); // Wait for un-fullscreen (1.2s) + drag (0.5s)
-          } else {
-            toast.message = `${getActionLabel(action.type)} on ${action.window.title}...`;
-            await executeWindowAction(action.window.windowID, action.window.pid, action.type);
-            await delay(400);
-          }
-          totalExecuted++;
-
-          // Move and fullscreen transitions can leave macOS on another space.
-          // Restore the source space before processing the next staged action.
-          if (["move", "enterFullScreen", "exitFullScreen"].includes(action.type)) {
-            await switchToSpace(sourceId);
-            await delay(600);
+            totalExecuted++;
+          } catch (error) {
+            failures.push(`${getActionLabel(action.type)} on "${action.window.title}": ${describeBatchError(error)}`);
+          } finally {
+            // A failed action may still have moved macOS to the target window's
+            // space before discovering that the action is unavailable.
+            if (["move", "enterFullScreen", "exitFullScreen"].includes(action.type)) {
+              await switchToSpace(sourceId);
+              await delay(600);
+            }
           }
         }
       }
@@ -177,8 +192,14 @@ export default function Command() {
         await restoreSpacesByDisplay(originalSpaces);
       }
 
-      toast.style = Toast.Style.Success;
-      toast.title = `Successfully completed ${totalExecuted} operation${totalExecuted === 1 ? "" : "s"}`;
+      if (failures.length > 0) {
+        toast.style = Toast.Style.Failure;
+        toast.title = `Completed ${totalExecuted} operation${totalExecuted === 1 ? "" : "s"}, skipped ${failures.length}`;
+        toast.message = failures.join("\n");
+      } else {
+        toast.style = Toast.Style.Success;
+        toast.title = `Successfully completed ${totalExecuted} operation${totalExecuted === 1 ? "" : "s"}`;
+      }
       await popToRoot();
     } catch (error) {
       toast.style = Toast.Style.Failure;

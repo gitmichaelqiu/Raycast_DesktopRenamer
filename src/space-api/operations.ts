@@ -8,7 +8,7 @@ import {
   type SpaceAPIWindowSpaceRecord,
   type SpaceAPIWindowsSnapshot,
 } from "./contract";
-import { runDesktopRenamerMethod } from "./transport";
+import { runDesktopRenamerMethod, type DesktopRenamerRequestOptions } from "./transport";
 
 export interface CurrentSpaceSnapshot {
   spacesByDisplay: Record<string, string>;
@@ -210,8 +210,9 @@ export async function executeWindowAction(
   pid: number,
   action: SpaceAPIWindowAction,
   errorMessage = "Failed to execute window action",
+  options: DesktopRenamerRequestOptions = {},
 ): Promise<SpaceAPIOperationResult> {
-  return await runDesktopRenamerMethod("executeWindowAction", { windowID, pid, action }, errorMessage);
+  return await runDesktopRenamerMethod("executeWindowAction", { windowID, pid, action }, errorMessage, options);
 }
 
 export async function moveSpecificWindow(
