@@ -1,4 +1,4 @@
-import { SpaceAPIParameters, SpaceAPIMethod } from "./space-api-types";
+import { SpaceAPIParameters, SpaceAPIMethod } from "./contract";
 
 export function escapeAppleScriptString(str: string): string {
   return str

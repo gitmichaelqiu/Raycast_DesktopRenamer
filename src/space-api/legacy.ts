@@ -9,8 +9,8 @@ import {
   type SpaceAPISpaceRecord,
   type SpaceAPIWindowRecord,
   type SpaceAPIWindowsSnapshot,
-} from "./space-api-types";
-import { isReadSpaceAPIMethod, isRecord, protocolError } from "./space-api-codec";
+} from "./contract";
+import { isReadSpaceAPIMethod, isRecord, protocolError } from "./codec";
 
 const execFileAsync = promisify(execFile);
 const SPACE_API_COMMAND_NOTIFICATION = "com.michaelqiu.DesktopRenamer.PerformCommand";

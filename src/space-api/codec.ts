@@ -16,7 +16,7 @@ import {
   type SpaceAPIStateChangedEvent,
   type SpaceAPIWindowRecord,
   type SpaceAPIWindowsSnapshot,
-} from "./space-api-types";
+} from "./contract";
 
 function compareVersions(left: string, right: string): number {
   const leftParts = parseVersion(left);

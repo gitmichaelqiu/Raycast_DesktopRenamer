@@ -19,7 +19,7 @@ import {
   type SpaceAPIParameterKind,
   type SpaceAPIParameters,
   type SpaceAPIOperationResult,
-} from "./space-api-types";
+} from "./contract";
 import {
   decodeStructuredRPCResponse,
   isReadSpaceAPIMethod,
@@ -31,21 +31,21 @@ import {
   protocolError,
   requiredString,
   validateStructuredResult,
-} from "./space-api-codec";
+} from "./codec";
 import {
   parseLegacySpaceRecords,
   parseLegacySpaceSnapshotResult,
   parseLegacyWindowsSnapshot,
   runLegacySpaceAPICommand,
-} from "./space-api-legacy";
-import { makeAppleScriptForMethod } from "./space-api-script";
-import { makeStructuredSpaceAPIJXA } from "./space-api-jxa";
+} from "./legacy";
+import { makeAppleScriptForMethod } from "./script";
+import { makeStructuredSpaceAPIJXA } from "./jxa";
 import {
   communicationMethod,
   checkDesktopRenamerRunning,
   handleDesktopRenamerError,
   requireDesktopRenamerInstalled,
-} from "./space-api-runtime";
+} from "./runtime";
 
 const execFileAsync = promisify(execFile);
 let structuredAPIInfoLookup: Promise<SpaceAPIInfo> | null = null;

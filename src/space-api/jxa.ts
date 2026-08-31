@@ -2,7 +2,7 @@ import {
   SPACE_API_PAYLOAD_KEY,
   SPACE_API_RPC_REQUEST_NOTIFICATION,
   SPACE_API_RPC_RESPONSE_NOTIFICATION,
-} from "./space-api-types";
+} from "./contract";
 
 export function makeStructuredSpaceAPIJXA(requestID: string, requestPayload: string, timeoutMs: number): string {
   return `

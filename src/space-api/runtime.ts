@@ -1,6 +1,6 @@
 import { showToast, Toast, open, environment, LaunchType, getApplications, getPreferenceValues } from "@raycast/api";
 import { runAppleScript } from "@raycast/utils";
-import { SPACE_API_ERROR_CODES, SpaceAPIProtocolError } from "./space-api-types";
+import { SPACE_API_ERROR_CODES, SpaceAPIProtocolError } from "./contract";
 
 export type CommunicationMethod = "automatic" | "spaceapi" | "applescript";
 

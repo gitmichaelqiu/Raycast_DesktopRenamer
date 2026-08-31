@@ -1,10 +1,10 @@
 import { runAppleScript } from "@raycast/utils";
-import { SpaceAPIProtocolError } from "./space-api-types";
-import { isReadSpaceAPIMethod } from "./space-api-codec";
-import { runLegacySpaceAPICommand } from "./space-api-legacy";
-import { parseSpaceAPICommand } from "./space-api-script";
-import { handleDesktopRenamerError, communicationMethod, requireDesktopRenamerInstalled } from "./space-api-runtime";
-import { normalizeMethodArguments, runDesktopRenamerScript, stringifyLegacyParameters } from "./space-api-transport";
+import { SpaceAPIProtocolError } from "./contract";
+import { isReadSpaceAPIMethod } from "./codec";
+import { runLegacySpaceAPICommand } from "./legacy";
+import { parseSpaceAPICommand } from "./script";
+import { handleDesktopRenamerError, communicationMethod, requireDesktopRenamerInstalled } from "./runtime";
+import { normalizeMethodArguments, runDesktopRenamerScript, stringifyLegacyParameters } from "./transport";
 
 export async function runDesktopRenamerCommand(command: string, errorMessage = "Is DesktopRenamer running?") {
   try {
