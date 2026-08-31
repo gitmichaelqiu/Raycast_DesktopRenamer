@@ -8,6 +8,7 @@ import {
   getCurrentSpacesByDisplay,
   restoreSpacesByDisplay,
   focusWindowOnSpace,
+  decodeWindowsSnapshotJSON,
 } from "./utils";
 import { isMoveTarget } from "./spaces";
 
@@ -31,6 +32,39 @@ interface WindowEntry {
 }
 
 function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEntry[] } {
+  if (raw.trimStart().startsWith("{")) {
+    try {
+      const snapshot = decodeWindowsSnapshotJSON(raw);
+      const spaces = snapshot.spaces.map((space) => ({
+        id: space.id,
+        name: space.name,
+        displayID: space.displayID,
+        num: space.number,
+        isFullscreen: space.isFullscreen,
+      }));
+      const spacesByID = new Map(spaces.map((space) => [space.id, space]));
+      const windows = snapshot.windows.flatMap((window) => {
+        const space = spacesByID.get(window.spaceID);
+        if (!space) return [];
+        return [
+          {
+            windowID: window.id,
+            pid: window.pid,
+            ownerName: window.ownerName,
+            appPath: window.appPath ?? "",
+            title: window.title ?? "",
+            isMinimized: window.isMinimized,
+            isHidden: window.isHidden,
+            space: { ...space },
+          },
+        ];
+      });
+      return { spaces, windows };
+    } catch {
+      return { spaces: [], windows: [] };
+    }
+  }
+
   const spaces: SpaceGroup[] = [];
   const windows: WindowEntry[] = [];
   let currentSpace: SpaceGroup | null = null;

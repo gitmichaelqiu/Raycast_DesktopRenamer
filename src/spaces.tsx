@@ -1,6 +1,12 @@
 import { Form, ActionPanel, Action, useNavigation, showToast, Toast } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
-import { runDesktopRenamerCommand, runDesktopRenamerScript, escapeAppleScriptString } from "./utils";
+import {
+  runDesktopRenamerCommand,
+  runDesktopRenamerScript,
+  escapeAppleScriptString,
+  decodeSpaceSnapshotJSON,
+  SpaceAPISnapshot,
+} from "./utils";
 
 export interface Space {
   id: string;
@@ -10,20 +16,6 @@ export interface Space {
   num: number;
   isFullscreen: boolean | undefined;
   appPath?: string;
-}
-
-interface SpaceSnapshot {
-  currentSpaceIDs: string[];
-  currentSpaceName: string;
-  spaces: Array<{
-    id: string;
-    name: string;
-    displayID: string;
-    displayName?: string;
-    number: number;
-    isFullscreen: boolean;
-    appPath?: string;
-  }>;
 }
 
 export function isMoveTarget(space: Pick<Space, "isFullscreen">) {
@@ -52,7 +44,7 @@ export function useSpaces() {
 
   if (data?.trimStart().startsWith("{")) {
     try {
-      const snapshot = JSON.parse(data) as SpaceSnapshot;
+      const snapshot: SpaceAPISnapshot = decodeSpaceSnapshotJSON(data);
       currentName = snapshot.currentSpaceName;
       currentId = snapshot.currentSpaceIDs.join(",");
       spaces = snapshot.spaces.map((space) => ({
