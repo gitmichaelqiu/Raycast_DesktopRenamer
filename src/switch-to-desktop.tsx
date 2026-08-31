@@ -1,6 +1,6 @@
 import { List, ActionPanel, Action, Icon, Color, showToast, Toast } from "@raycast/api";
 import { useState } from "react";
-import { runDesktopRenamerCommand, escapeAppleScriptString } from "./utils";
+import { switchToSpace, moveWindowToSpace, rearrangeSpace as rearrangeDesktopSpace } from "./utils";
 import { isMoveTarget, useSpaces, Space, RenameSpaceForm } from "./spaces";
 
 export default function Command() {
@@ -11,8 +11,7 @@ export default function Command() {
 
   async function switchSpace(space: Space) {
     try {
-      const sanitizedId = escapeAppleScriptString(space.id);
-      await runDesktopRenamerCommand(`switch to space "${sanitizedId}"`);
+      await switchToSpace(space.id);
       await new Promise((resolve) => setTimeout(resolve, 500));
       await revalidate();
     } catch {
@@ -22,14 +21,13 @@ export default function Command() {
 
   async function moveWindow(space: Space) {
     try {
-      const sanitizedId = escapeAppleScriptString(space.id);
       const isCurrentFullscreen = currentSpace?.isFullscreen;
 
       if (isCurrentFullscreen) {
         await showToast({ style: Toast.Style.Animated, title: "Un-fullscreening and moving window..." });
       }
 
-      await runDesktopRenamerCommand(`move window to space "${sanitizedId}"`);
+      await moveWindowToSpace(space.id);
 
       if (isCurrentFullscreen) {
         await new Promise((resolve) => setTimeout(resolve, 1700));
@@ -46,8 +44,7 @@ export default function Command() {
     if (rearrangingSpaceID !== null) return;
     setRearrangingSpaceID(space.id);
     try {
-      const sanitizedId = escapeAppleScriptString(space.id);
-      await runDesktopRenamerCommand(`rearrange space "${sanitizedId}" direction "${direction}"`);
+      await rearrangeDesktopSpace(space.id, direction);
       await new Promise((resolve) => setTimeout(resolve, 700));
       await showToast({
         style: Toast.Style.Success,

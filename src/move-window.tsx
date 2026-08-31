@@ -1,10 +1,5 @@
 import { List, ActionPanel, Action, Icon, showToast, Toast, getPreferenceValues } from "@raycast/api";
-import {
-  runDesktopRenamerCommand,
-  escapeAppleScriptString,
-  getCurrentSpacesByDisplay,
-  restoreSpacesByDisplay,
-} from "./utils";
+import { moveWindowToSpace, getCurrentSpacesByDisplay, restoreSpacesByDisplay } from "./utils";
 import { isMoveTarget, useSpaces, Space, RenameSpaceForm } from "./spaces";
 
 export default function Command() {
@@ -16,14 +11,13 @@ export default function Command() {
     try {
       const preferences = getPreferenceValues<{ returnToOriginalSpace?: boolean }>();
       const originalSpaces = preferences.returnToOriginalSpace ? await getCurrentSpacesByDisplay() : undefined;
-      const sanitizedId = escapeAppleScriptString(space.id);
       const isCurrentFullscreen = currentSpace?.isFullscreen;
 
       if (isCurrentFullscreen) {
         await showToast({ style: Toast.Style.Animated, title: "Un-fullscreening and moving window..." });
       }
 
-      await runDesktopRenamerCommand(`move window to space "${sanitizedId}"`);
+      await moveWindowToSpace(space.id);
 
       if (isCurrentFullscreen === true) {
         await new Promise((resolve) => setTimeout(resolve, 1700));
