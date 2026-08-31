@@ -2,131 +2,29 @@ import { List, ActionPanel, Action, Icon, showToast, Toast, popToRoot, Color, ge
 import { usePromise } from "@raycast/utils";
 import { useEffect, useState } from "react";
 import {
-  runDesktopRenamerCommand,
-  runDesktopRenamerScript,
   moveSpecificWindowToSpace,
   getCurrentSpacesByDisplay,
   restoreSpacesByDisplay,
   focusWindowOnSpace,
-  decodeWindowsSnapshotJSON,
+  getCurrentSpaceIDs,
+  executeWindowAction,
+  SpaceAPIWindowAction,
+  getWindowsSnapshot,
+  mapWindowsSnapshot,
+  SpaceAPIWindowEntry,
+  SpaceAPIWindowSpaceRecord,
 } from "./utils";
 import { isMoveTarget } from "./spaces";
 
-interface SpaceGroup {
-  id: string;
-  name: string;
-  displayID: string;
-  num: number;
-  isFullscreen: boolean | undefined;
-}
-
-interface WindowEntry {
-  windowID: number;
-  pid: number;
-  ownerName: string;
-  appPath: string;
-  title: string;
-  space: SpaceGroup;
-  isMinimized: boolean | undefined;
-  isHidden: boolean | undefined;
-}
-
-function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEntry[] } {
-  if (raw.trimStart().startsWith("{")) {
-    try {
-      const snapshot = decodeWindowsSnapshotJSON(raw);
-      const spaces = snapshot.spaces.map((space) => ({
-        id: space.id,
-        name: space.name,
-        displayID: space.displayID,
-        num: space.number,
-        isFullscreen: space.isFullscreen,
-      }));
-      const spacesByID = new Map(spaces.map((space) => [space.id, space]));
-      const windows = snapshot.windows.flatMap((window) => {
-        const space = spacesByID.get(window.spaceID);
-        if (!space) return [];
-        return [
-          {
-            windowID: window.id,
-            pid: window.pid,
-            ownerName: window.ownerName,
-            appPath: window.appPath ?? "",
-            title: window.title ?? "",
-            isMinimized: window.isMinimized,
-            isHidden: window.isHidden,
-            space: { ...space },
-          },
-        ];
-      });
-      return { spaces, windows };
-    } catch {
-      return { spaces: [], windows: [] };
-    }
-  }
-
-  const spaces: SpaceGroup[] = [];
-  const windows: WindowEntry[] = [];
-  let currentSpace: SpaceGroup | null = null;
-
-  for (const line of raw.split("\n")) {
-    if (line.startsWith(">")) {
-      const parts = line.slice(1).split("~");
-      currentSpace = {
-        id: parts[0],
-        name: parts[1] || "Unknown",
-        displayID: parts[2] || "Display",
-        num: parseInt(parts[3] || "0", 10),
-        // parts[4] (isFullscreen) is only present in the 5-field format.
-        // When absent (legacy 4-field format), leave undefined as unknown.
-        isFullscreen: parts.length >= 5 ? parts[4] === "1" : undefined,
-      };
-      spaces.push(currentSpace);
-    } else if (line.startsWith("  ") && currentSpace) {
-      const parts = line.trim().split("|");
-      if (parts.length >= 7) {
-        // New format: wid|pid|owner|appPath|title|isMinimized|isHidden
-        windows.push({
-          windowID: parseInt(parts[0], 10),
-          pid: parseInt(parts[1], 10),
-          ownerName: parts[2],
-          appPath: parts[3],
-          title: parts.slice(4, parts.length - 2).join("|"),
-          isMinimized: parts[parts.length - 2] === "1",
-          isHidden: parts[parts.length - 1] === "1",
-          space: { ...currentSpace },
-        });
-      } else if (parts.length >= 5) {
-        // Legacy format: wid|pid|owner|appPath|title (no state fields).
-        // Leave state undefined so the UI only shows state-dependent
-        // actions and badges when the value is confirmed.
-        windows.push({
-          windowID: parseInt(parts[0], 10),
-          pid: parseInt(parts[1], 10),
-          ownerName: parts[2],
-          appPath: parts[3],
-          title: parts.slice(4).join("|"),
-          isMinimized: undefined,
-          isHidden: undefined,
-          space: { ...currentSpace },
-        });
-      }
-    }
-  }
-  return { spaces, windows };
-}
+type SpaceGroup = SpaceAPIWindowSpaceRecord;
+type WindowEntry = SpaceAPIWindowEntry;
 
 export default function Command() {
   const [filterSpaceId, setFilterSpaceId] = useState("all");
   const [terminatingPIDs, setTerminatingPIDs] = useState<Set<number>>(new Set());
 
   const { data, isLoading, revalidate } = usePromise(async () => {
-    const result = await runDesktopRenamerScript(`
-      tell application "DesktopRenamer"
-        get windows
-      end tell
-    `);
-    return parseWindowData(result);
+    return mapWindowsSnapshot(await getWindowsSnapshot());
   });
   const {
     data: currentSpaces,
@@ -181,7 +79,7 @@ export default function Command() {
     try {
       const prefs = getPreferenceValues<Preferences>();
       const originalSpaces = await getCurrentSpacesByDisplay();
-      const targetId = (await runDesktopRenamerCommand("get current space id")).trim();
+      const targetId = (await getCurrentSpaceIDs())[0] ?? "";
       if (!targetId) {
         await showToast({ style: Toast.Style.Failure, title: "Could not determine current desktop" });
         return;
@@ -251,13 +149,13 @@ export default function Command() {
     }
   }
 
-  async function handleWindowAction(entry: WindowEntry, action: string) {
+  async function handleWindowAction(entry: WindowEntry, action: SpaceAPIWindowAction) {
     try {
       if (action === "quit") {
         setTerminatingPIDs((previous) => new Set(previous).add(entry.pid));
       }
       const toast = await showToast({ style: Toast.Style.Animated, title: `Executing action: ${action}...` });
-      await runDesktopRenamerCommand(`execute window action "${entry.windowID}" pid "${entry.pid}" action "${action}"`);
+      await executeWindowAction(entry.windowID, entry.pid, action);
       toast.style = Toast.Style.Success;
       toast.title = `Executed ${action}`;
       revalidate();

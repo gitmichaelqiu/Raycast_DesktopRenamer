@@ -2,121 +2,23 @@ import { List, ActionPanel, Action, showToast, Toast, popToRoot, Icon, Color, ge
 import { usePromise } from "@raycast/utils";
 import { useEffect, useState } from "react";
 import {
-  runDesktopRenamerCommand,
-  runDesktopRenamerScript,
-  escapeAppleScriptString,
   moveSpecificWindowToSpace,
   getCurrentSpacesByDisplay,
   restoreSpacesByDisplay,
-  decodeWindowsSnapshotJSON,
+  getWindowsSnapshot,
+  mapWindowsSnapshot,
+  switchToSpace,
+  executeWindowAction,
+  SpaceAPIWindowEntry,
+  SpaceAPIWindowSpaceRecord,
 } from "./utils";
 import { isMoveTarget } from "./spaces";
 
-interface SpaceGroup {
-  id: string;
-  name: string;
-  displayID: string;
-  num: number;
-  isFullscreen: boolean | undefined;
-}
-
-interface WindowEntry {
-  windowID: number;
-  pid: number;
-  ownerName: string;
-  appPath: string;
-  title: string;
-  space: SpaceGroup;
-  isMinimized: boolean | undefined;
-  isHidden: boolean | undefined;
-}
+type SpaceGroup = SpaceAPIWindowSpaceRecord;
+type WindowEntry = SpaceAPIWindowEntry;
 
 function actionKey(w: { windowID: number; pid: number }): string {
   return `${w.windowID}-${w.pid}`;
-}
-
-function parseWindowData(raw: string): { spaces: SpaceGroup[]; windows: WindowEntry[] } {
-  if (raw.trimStart().startsWith("{")) {
-    try {
-      const snapshot = decodeWindowsSnapshotJSON(raw);
-      const spaces = snapshot.spaces.map((space) => ({
-        id: space.id,
-        name: space.name,
-        displayID: space.displayID,
-        num: space.number,
-        isFullscreen: space.isFullscreen,
-      }));
-      const spacesByID = new Map(spaces.map((space) => [space.id, space]));
-      const windows = snapshot.windows.flatMap((window) => {
-        const space = spacesByID.get(window.spaceID);
-        if (!space) return [];
-        return [
-          {
-            windowID: window.id,
-            pid: window.pid,
-            ownerName: window.ownerName,
-            appPath: window.appPath ?? "",
-            title: window.title ?? "",
-            isMinimized: window.isMinimized,
-            isHidden: window.isHidden,
-            space: { ...space },
-          },
-        ];
-      });
-      return { spaces, windows };
-    } catch {
-      return { spaces: [], windows: [] };
-    }
-  }
-
-  const spaces: SpaceGroup[] = [];
-  const windows: WindowEntry[] = [];
-  let currentSpace: SpaceGroup | null = null;
-
-  for (const line of raw.split("\n")) {
-    if (line.startsWith(">")) {
-      const parts = line.slice(1).split("~");
-      currentSpace = {
-        id: parts[0],
-        name: parts[1] || "Unknown",
-        displayID: parts[2] || "Display",
-        num: parseInt(parts[3] || "0", 10),
-        // parts[4] (isFullscreen) is only present in the 5-field format.
-        // When absent (legacy 4-field format), leave undefined as unknown.
-        isFullscreen: parts.length >= 5 ? parts[4] === "1" : undefined,
-      };
-      spaces.push(currentSpace);
-    } else if (line.startsWith("  ") && currentSpace) {
-      const parts = line.trim().split("|");
-      if (parts.length >= 7) {
-        windows.push({
-          windowID: parseInt(parts[0], 10),
-          pid: parseInt(parts[1], 10),
-          ownerName: parts[2],
-          appPath: parts[3],
-          title: parts.slice(4, parts.length - 2).join("|"),
-          isMinimized: parts[parts.length - 2] === "1",
-          isHidden: parts[parts.length - 1] === "1",
-          space: { ...currentSpace },
-        });
-      } else if (parts.length >= 5) {
-        // Legacy format: wid|pid|owner|appPath|title (no state fields).
-        // Leave state undefined so the UI only shows state-dependent
-        // actions and badges when the value is confirmed.
-        windows.push({
-          windowID: parseInt(parts[0], 10),
-          pid: parseInt(parts[1], 10),
-          ownerName: parts[2],
-          appPath: parts[3],
-          title: parts.slice(4).join("|"),
-          isMinimized: undefined,
-          isHidden: undefined,
-          space: { ...currentSpace },
-        });
-      }
-    }
-  }
-  return { spaces, windows };
 }
 
 function delay(ms: number) {
@@ -156,12 +58,7 @@ export default function Command() {
   const [terminatingPIDs, setTerminatingPIDs] = useState<Set<number>>(new Set());
 
   const { data, isLoading } = usePromise(async () => {
-    const result = await runDesktopRenamerScript(`
-      tell application "DesktopRenamer"
-        get windows
-      end tell
-    `);
-    return parseWindowData(result);
+    return mapWindowsSnapshot(await getWindowsSnapshot());
   });
 
   const spaces = data?.spaces ?? [];
@@ -252,11 +149,14 @@ export default function Command() {
         toast.message = `Processing ${sourceActions[0].window.space.name}...`;
 
         // Switch to the source space once for all its windows
-        await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(sourceId)}"`);
+        await switchToSpace(sourceId);
         await delay(600); // Give Mission Control time to settle
 
         for (const action of sourceActions) {
-          if (action.type === "move" && action.targetSpace) {
+          if (action.type === "move") {
+            if (!action.targetSpace) {
+              throw new Error(`No target desktop was selected for ${action.window.title}.`);
+            }
             const isFullscreen = action.window.space.isFullscreen;
             if (isFullscreen === true) {
               toast.message = `Un-fullscreening and moving ${action.window.title}...`;
@@ -273,9 +173,7 @@ export default function Command() {
             await delay(isFullscreen === false ? 500 : 1700); // Wait for un-fullscreen (1.2s) + drag (0.5s)
           } else {
             toast.message = `Executing ${action.type} on ${action.window.title}...`;
-            await runDesktopRenamerCommand(
-              `execute window action "${action.window.windowID}" pid "${action.window.pid}" action "${action.type}"`,
-            );
+            await executeWindowAction(action.window.windowID, action.window.pid, action.type);
             await delay(400);
           }
           totalExecuted++;
@@ -283,7 +181,7 @@ export default function Command() {
           // Move and fullscreen transitions can leave macOS on another space.
           // Restore the source space before processing the next staged action.
           if (["move", "enterFullScreen", "exitFullScreen"].includes(action.type)) {
-            await runDesktopRenamerCommand(`switch to space "${escapeAppleScriptString(sourceId)}"`);
+            await switchToSpace(sourceId);
             await delay(600);
           }
         }
