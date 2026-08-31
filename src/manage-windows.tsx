@@ -9,6 +9,7 @@ import {
   mapWindowsSnapshot,
   switchToSpace,
   executeWindowAction,
+  getWindowActionLabel,
   SpaceAPIWindowEntry,
   SpaceAPIWindowSpaceRecord,
 } from "./utils";
@@ -31,25 +32,8 @@ interface StagedAction {
   targetSpace?: SpaceGroup;
 }
 
-function getActionLabel(type: string): string {
-  switch (type) {
-    case "close":
-      return "Close";
-    case "minimize":
-      return "Minimize";
-    case "hide":
-      return "Hide App";
-    case "enterFullScreen":
-      return "Enter Full Screen";
-    case "exitFullScreen":
-      return "Exit Full Screen";
-    case "quit":
-      return "Quit App";
-    case "restore":
-      return "Restore";
-    default:
-      return type;
-  }
+function getActionLabel(type: StagedAction["type"]): string {
+  return type === "move" ? "Move Window" : getWindowActionLabel(type);
 }
 
 export default function Command() {
@@ -172,7 +156,7 @@ export default function Command() {
             });
             await delay(isFullscreen === false ? 500 : 1700); // Wait for un-fullscreen (1.2s) + drag (0.5s)
           } else {
-            toast.message = `Executing ${action.type} on ${action.window.title}...`;
+            toast.message = `${getActionLabel(action.type)} on ${action.window.title}...`;
             await executeWindowAction(action.window.windowID, action.window.pid, action.type);
             await delay(400);
           }

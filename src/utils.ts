@@ -54,6 +54,20 @@ export const SPACE_API_WINDOW_ACTIONS = [
 
 export type SpaceAPIWindowAction = (typeof SPACE_API_WINDOW_ACTIONS)[number];
 
+const SPACE_API_WINDOW_ACTION_LABELS: Record<SpaceAPIWindowAction, string> = {
+  close: "Close Window",
+  minimize: "Minimize Window",
+  hide: "Hide Application",
+  enterFullScreen: "Enter Full Screen",
+  exitFullScreen: "Exit Full Screen",
+  quit: "Quit Application",
+  restore: "Restore Window",
+};
+
+export function getWindowActionLabel(action: SpaceAPIWindowAction): string {
+  return SPACE_API_WINDOW_ACTION_LABELS[action];
+}
+
 type SpaceAPIParameterKind = "string" | "positiveInteger" | "direction" | "windowAction";
 
 interface SpaceAPIMethodDefinition {

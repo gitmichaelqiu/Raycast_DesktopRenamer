@@ -13,6 +13,7 @@ import {
   mapWindowsSnapshot,
   SpaceAPIWindowEntry,
   SpaceAPIWindowSpaceRecord,
+  getWindowActionLabel,
 } from "./utils";
 import { isMoveTarget } from "./spaces";
 
@@ -151,13 +152,14 @@ export default function Command() {
 
   async function handleWindowAction(entry: WindowEntry, action: SpaceAPIWindowAction) {
     try {
+      const actionLabel = getWindowActionLabel(action);
       if (action === "quit") {
         setTerminatingPIDs((previous) => new Set(previous).add(entry.pid));
       }
-      const toast = await showToast({ style: Toast.Style.Animated, title: `Executing action: ${action}...` });
+      const toast = await showToast({ style: Toast.Style.Animated, title: `${actionLabel}...` });
       await executeWindowAction(entry.windowID, entry.pid, action);
       toast.style = Toast.Style.Success;
-      toast.title = `Executed ${action}`;
+      toast.title = `${actionLabel} completed`;
       revalidate();
     } catch {
       if (action === "quit") {
