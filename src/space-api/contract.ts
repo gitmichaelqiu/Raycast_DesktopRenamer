@@ -218,6 +218,7 @@ export interface SpaceAPIWindowSpaceRecord {
   id: string;
   name: string;
   displayID: string;
+  displayName: string;
   num: number;
   isFullscreen: boolean;
 }

@@ -60,8 +60,8 @@ export default function Command() {
 
   return (
     <List isLoading={isLoading || rearrangingSpaceID !== null} searchBarPlaceholder="Search desktops...">
-      {Object.entries(groupedSpaces).map(([displayID, spaces]) => (
-        <List.Section key={displayID} title={displayID}>
+      {Object.entries(groupedSpaces).map(([displayName, spaces]) => (
+        <List.Section key={displayName} title={displayName}>
           {spaces.map((space) => {
             const isCurrent = currentIds.includes(space.id);
             return (

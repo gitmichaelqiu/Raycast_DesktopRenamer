@@ -197,7 +197,7 @@ export default function Command() {
         .map((space) => {
           const windows = windowsBySpace.get(space.id) ?? [];
           return (
-            <List.Section key={space.id} title={space.name} subtitle={`${space.displayID} · Space ${space.num}`}>
+            <List.Section key={space.id} title={space.name} subtitle={`${space.displayName} · Space ${space.num}`}>
               {windows.map((entry) => (
                 <List.Item
                   key={`${entry.windowID}-${entry.pid}`}
@@ -228,7 +228,7 @@ export default function Command() {
                         >
                           {(() => {
                             const moveTargets = allSpaces.filter((s) => s.id !== entry.space.id && isMoveTarget(s));
-                            const displayIDs = Array.from(new Set(moveTargets.map((space) => space.displayID)));
+                            const displayNames = Array.from(new Set(moveTargets.map((space) => space.displayName)));
                             const makeAction = (targetSpace: SpaceGroup) => (
                               <Action
                                 key={targetSpace.id}
@@ -242,13 +242,13 @@ export default function Command() {
                               />
                             );
 
-                            if (displayIDs.length <= 1) {
+                            if (displayNames.length <= 1) {
                               return moveTargets.map(makeAction);
                             }
 
-                            return displayIDs.map((displayID) => (
-                              <ActionPanel.Section key={displayID} title={displayID}>
-                                {moveTargets.filter((space) => space.displayID === displayID).map(makeAction)}
+                            return displayNames.map((displayName) => (
+                              <ActionPanel.Section key={displayName} title={displayName}>
+                                {moveTargets.filter((space) => space.displayName === displayName).map(makeAction)}
                               </ActionPanel.Section>
                             ));
                           })()}

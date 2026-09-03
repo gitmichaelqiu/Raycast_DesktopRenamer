@@ -87,6 +87,7 @@ export function mapWindowsSnapshot(snapshot: SpaceAPIWindowsSnapshot): {
     id: space.id,
     name: space.name,
     displayID: space.displayID,
+    displayName: space.displayName,
     num: space.number,
     isFullscreen: space.isFullscreen,
   }));

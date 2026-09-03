@@ -36,11 +36,11 @@ export default function Command() {
 
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search desktops...">
-      {Object.entries(groupedSpaces).map(([displayID, spaces]) => {
+      {Object.entries(groupedSpaces).map(([displayName, spaces]) => {
         const filtered = spaces.filter((s) => s.id !== currentSpaceId && isMoveTarget(s));
         if (filtered.length === 0) return null;
         return (
-          <List.Section key={displayID} title={displayID}>
+          <List.Section key={displayName} title={displayName}>
             {filtered.map((space) => {
               return (
                 <List.Item
