@@ -13,7 +13,7 @@ import {
   SpaceAPIWindowEntry,
   SpaceAPIWindowSpaceRecord,
 } from "./utils";
-import { isMoveTarget } from "./spaces";
+import { groupByDisplay, hasMultipleDisplays, isMoveTarget } from "./spaces";
 
 type SpaceGroup = SpaceAPIWindowSpaceRecord;
 type WindowEntry = SpaceAPIWindowEntry;
@@ -52,6 +52,7 @@ export default function Command() {
   const spaces = data?.spaces ?? [];
   const rawWindows = data?.windows ?? [];
   const allWindows = rawWindows.filter((window) => !terminatingPIDs.has(window.pid));
+  const showDisplaySections = hasMultipleDisplays(spaces);
 
   useEffect(() => {
     if (!data) return;
@@ -259,7 +260,11 @@ export default function Command() {
         if (spaceWindows.length === 0) return null;
 
         return (
-          <List.Section key={space.id} title={space.name} subtitle={`${spaceWindows.length} windows`}>
+          <List.Section
+            key={space.id}
+            title={showDisplaySections ? `${space.displayName} · ${space.name}` : space.name}
+            subtitle={`${spaceWindows.length} windows`}
+          >
             {spaceWindows.map((win) => (
               <List.Item
                 key={`win_${actionKey(win)}`}
@@ -276,16 +281,27 @@ export default function Command() {
                 actions={
                   <ActionPanel>
                     <ActionPanel.Submenu title="Stage Move to Desktop…" icon={Icon.ArrowRight}>
-                      {spaces
-                        .filter((s) => s.id !== space.id && isMoveTarget(s))
-                        .map((targetSpace) => (
+                      {(() => {
+                        const moveTargets = spaces.filter((s) => s.id !== space.id && isMoveTarget(s));
+                        const makeAction = (targetSpace: SpaceGroup) => (
                           <Action
                             key={targetSpace.id}
                             title={targetSpace.name}
                             icon={Icon.Desktop}
                             onAction={() => stageAction(win, "move", targetSpace)}
                           />
-                        ))}
+                        );
+
+                        if (!showDisplaySections) {
+                          return moveTargets.map(makeAction);
+                        }
+
+                        return groupByDisplay(moveTargets).map((group) => (
+                          <ActionPanel.Section key={group.displayID} title={group.displayName}>
+                            {group.items.map(makeAction)}
+                          </ActionPanel.Section>
+                        ));
+                      })()}
                     </ActionPanel.Submenu>
                     <ExecuteAction />
                     <ActionPanel.Section title="Stage Actions">

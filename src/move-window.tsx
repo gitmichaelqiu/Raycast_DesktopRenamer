@@ -3,7 +3,7 @@ import { moveWindowToSpace, getCurrentSpacesByDisplay, restoreSpacesByDisplay } 
 import { isMoveTarget, useSpaces, Space, RenameSpaceForm } from "./spaces";
 
 export default function Command() {
-  const { spaces, groupedSpaces, currentId, isLoading, revalidate } = useSpaces();
+  const { spaces, displayGroups, hasMultipleDisplays, currentId, isLoading, revalidate } = useSpaces();
   const currentSpaceId = currentId ? currentId.split(",")[0]?.trim() : null;
   const currentSpace = currentSpaceId ? spaces.find((s) => s.id === currentSpaceId) : undefined;
 
@@ -34,37 +34,41 @@ export default function Command() {
     }
   }
 
+  function renderSpace(space: Space) {
+    return (
+      <List.Item
+        key={space.id}
+        title={space.name}
+        subtitle={`Space ${space.num}`}
+        icon={{ source: Icon.Window }}
+        actions={
+          <ActionPanel>
+            <Action title="Move Window" icon={Icon.Window} onAction={() => moveWindow(space)} />
+            <Action.Push
+              title="Rename Space"
+              shortcut={{ modifiers: ["cmd"], key: "r" }}
+              icon={Icon.Pencil}
+              target={<RenameSpaceForm space={space} onRename={revalidate} />}
+            />
+          </ActionPanel>
+        }
+      />
+    );
+  }
+
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search desktops...">
-      {Object.entries(groupedSpaces).map(([displayName, spaces]) => {
-        const filtered = spaces.filter((s) => s.id !== currentSpaceId && isMoveTarget(s));
-        if (filtered.length === 0) return null;
-        return (
-          <List.Section key={displayName} title={displayName}>
-            {filtered.map((space) => {
-              return (
-                <List.Item
-                  key={space.id}
-                  title={space.name}
-                  subtitle={`Space ${space.num}`}
-                  icon={{ source: Icon.Window }}
-                  actions={
-                    <ActionPanel>
-                      <Action title="Move Window" icon={Icon.Window} onAction={() => moveWindow(space)} />
-                      <Action.Push
-                        title="Rename Space"
-                        shortcut={{ modifiers: ["cmd"], key: "r" }}
-                        icon={Icon.Pencil}
-                        target={<RenameSpaceForm space={space} onRename={revalidate} />}
-                      />
-                    </ActionPanel>
-                  }
-                />
-              );
-            })}
-          </List.Section>
-        );
-      })}
+      {hasMultipleDisplays
+        ? displayGroups.map((group) => {
+            const filtered = group.items.filter((space) => space.id !== currentSpaceId && isMoveTarget(space));
+            if (filtered.length === 0) return null;
+            return (
+              <List.Section key={group.displayID} title={group.displayName}>
+                {filtered.map(renderSpace)}
+              </List.Section>
+            );
+          })
+        : spaces.filter((space) => space.id !== currentSpaceId && isMoveTarget(space)).map(renderSpace)}
     </List>
   );
 }

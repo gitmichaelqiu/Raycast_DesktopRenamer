@@ -15,7 +15,7 @@ import {
   SpaceAPIWindowSpaceRecord,
   getWindowActionLabel,
 } from "./utils";
-import { isMoveTarget } from "./spaces";
+import { groupByDisplay, hasMultipleDisplays, isMoveTarget } from "./spaces";
 
 type SpaceGroup = SpaceAPIWindowSpaceRecord;
 type WindowEntry = SpaceAPIWindowEntry;
@@ -42,6 +42,7 @@ export default function Command() {
   const rawWindows = data?.windows ?? [];
   const allWindows = rawWindows.filter((window) => !terminatingPIDs.has(window.pid));
   const currentSpaceIDs = new Set(Object.values(currentSpaces?.spacesByDisplay ?? {}));
+  const showDisplaySections = hasMultipleDisplays(allSpaces);
 
   useEffect(() => {
     if (!data) return;
@@ -197,7 +198,11 @@ export default function Command() {
         .map((space) => {
           const windows = windowsBySpace.get(space.id) ?? [];
           return (
-            <List.Section key={space.id} title={space.name} subtitle={`${space.displayName} · Space ${space.num}`}>
+            <List.Section
+              key={space.id}
+              title={showDisplaySections ? `${space.displayName} · ${space.name}` : space.name}
+              subtitle={`Space ${space.num}`}
+            >
               {windows.map((entry) => (
                 <List.Item
                   key={`${entry.windowID}-${entry.pid}`}
@@ -228,7 +233,6 @@ export default function Command() {
                         >
                           {(() => {
                             const moveTargets = allSpaces.filter((s) => s.id !== entry.space.id && isMoveTarget(s));
-                            const displayNames = Array.from(new Set(moveTargets.map((space) => space.displayName)));
                             const makeAction = (targetSpace: SpaceGroup) => (
                               <Action
                                 key={targetSpace.id}
@@ -242,13 +246,13 @@ export default function Command() {
                               />
                             );
 
-                            if (displayNames.length <= 1) {
+                            if (!showDisplaySections) {
                               return moveTargets.map(makeAction);
                             }
 
-                            return displayNames.map((displayName) => (
-                              <ActionPanel.Section key={displayName} title={displayName}>
-                                {moveTargets.filter((space) => space.displayName === displayName).map(makeAction)}
+                            return groupByDisplay(moveTargets).map((group) => (
+                              <ActionPanel.Section key={group.displayID} title={group.displayName}>
+                                {group.items.map(makeAction)}
                               </ActionPanel.Section>
                             ));
                           })()}

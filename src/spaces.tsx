@@ -12,8 +12,34 @@ export interface Space {
   appPath?: string;
 }
 
+export interface DisplayGroup<T> {
+  displayID: string;
+  displayName: string;
+  items: T[];
+}
+
 export function isMoveTarget(space: Pick<Space, "isFullscreen">) {
   return space.isFullscreen === false;
+}
+
+export function groupByDisplay<T extends Pick<Space, "displayID" | "displayName">>(items: T[]): DisplayGroup<T>[] {
+  const groups = new Map<string, DisplayGroup<T>>();
+
+  for (const item of items) {
+    const group = groups.get(item.displayID) ?? {
+      displayID: item.displayID,
+      displayName: item.displayName,
+      items: [],
+    };
+    group.items.push(item);
+    groups.set(item.displayID, group);
+  }
+
+  return Array.from(groups.values());
+}
+
+export function hasMultipleDisplays<T extends Pick<Space, "displayID">>(items: T[]): boolean {
+  return new Set(items.map((item) => item.displayID)).size > 1;
 }
 
 export function useSpaces() {
@@ -44,22 +70,14 @@ export function useSpaces() {
     }));
   }
 
-  const groupedSpaces =
-    spaces.reduce(
-      (acc, space) => {
-        const group = acc[space.displayName] || [];
-        group.push(space);
-        acc[space.displayName] = group;
-        return acc;
-      },
-      {} as Record<string, Space[]>,
-    ) || {};
+  const displayGroups = groupByDisplay(spaces);
 
   return {
     spaces,
     currentName,
     currentId,
-    groupedSpaces,
+    displayGroups,
+    hasMultipleDisplays: hasMultipleDisplays(spaces),
     isLoading,
     revalidate,
   };

@@ -4,7 +4,7 @@ import { switchToSpace, moveWindowToSpace, rearrangeSpace as rearrangeDesktopSpa
 import { isMoveTarget, useSpaces, Space, RenameSpaceForm } from "./spaces";
 
 export default function Command() {
-  const { spaces, groupedSpaces, currentId, isLoading, revalidate } = useSpaces();
+  const { spaces, displayGroups, hasMultipleDisplays, currentId, isLoading, revalidate } = useSpaces();
   const currentIds = currentId ? currentId.split(",").map((s) => s.trim()) : [];
   const currentSpace = spaces.find((s) => currentIds.includes(s.id));
   const [rearrangingSpaceID, setRearrangingSpaceID] = useState<string | null>(null);
@@ -58,63 +58,65 @@ export default function Command() {
     }
   }
 
+  function renderSpace(space: Space) {
+    const isCurrent = currentIds.includes(space.id);
+    return (
+      <List.Item
+        key={space.id}
+        title={space.name}
+        subtitle={`Space ${space.num}`}
+        icon={
+          space.isFullscreen && space.appPath
+            ? { fileIcon: space.appPath }
+            : { source: Icon.Desktop, tintColor: isCurrent ? Color.Blue : undefined }
+        }
+        accessories={isCurrent ? [{ tag: { value: "Current", color: Color.Blue } }] : []}
+        actions={
+          <ActionPanel>
+            <Action title="Switch to Desktop" icon={Icon.Desktop} onAction={() => switchSpace(space)} />
+            {isMoveTarget(space) && (
+              <Action
+                title="Move Window to Desktop"
+                icon={Icon.Window}
+                shortcut={{ modifiers: ["cmd"], key: "return" }}
+                onAction={() => moveWindow(space)}
+              />
+            )}
+            {space.isFullscreen !== true && (
+              <Action.Push
+                title="Rename Space"
+                shortcut={{ modifiers: ["cmd"], key: "r" }}
+                icon={Icon.Pencil}
+                target={<RenameSpaceForm space={space} onRename={revalidate} />}
+              />
+            )}
+            <Action
+              title="Move Space up"
+              icon={Icon.ArrowUp}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "arrowUp" }}
+              onAction={() => rearrangeSpace(space, "up")}
+            />
+            <Action
+              title="Move Space Down"
+              icon={Icon.ArrowDown}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "arrowDown" }}
+              onAction={() => rearrangeSpace(space, "down")}
+            />
+          </ActionPanel>
+        }
+      />
+    );
+  }
+
   return (
     <List isLoading={isLoading || rearrangingSpaceID !== null} searchBarPlaceholder="Search desktops...">
-      {Object.entries(groupedSpaces).map(([displayName, spaces]) => (
-        <List.Section key={displayName} title={displayName}>
-          {spaces.map((space) => {
-            const isCurrent = currentIds.includes(space.id);
-            return (
-              <List.Item
-                key={space.id}
-                title={space.name}
-                subtitle={`Space ${space.num}`}
-                icon={
-                  space.isFullscreen && space.appPath
-                    ? { fileIcon: space.appPath }
-                    : { source: Icon.Desktop, tintColor: isCurrent ? Color.Blue : undefined }
-                }
-                accessories={isCurrent ? [{ tag: { value: "Current", color: Color.Blue } }] : []}
-                actions={
-                  <ActionPanel>
-                    <Action title="Switch to Desktop" icon={Icon.Desktop} onAction={() => switchSpace(space)} />
-                    {isMoveTarget(space) && (
-                      <Action
-                        title="Move Window to Desktop"
-                        icon={Icon.Window}
-                        shortcut={{ modifiers: ["cmd"], key: "return" }}
-                        onAction={() => moveWindow(space)}
-                      />
-                    )}
-                    {space.isFullscreen !== true && (
-                      <Action.Push
-                        title="Rename Space"
-                        shortcut={{ modifiers: ["cmd"], key: "r" }}
-                        icon={Icon.Pencil}
-                        target={<RenameSpaceForm space={space} onRename={revalidate} />}
-                      />
-                    )}
-                    <>
-                      <Action
-                        title="Move Space up"
-                        icon={Icon.ArrowUp}
-                        shortcut={{ modifiers: ["cmd", "shift"], key: "arrowUp" }}
-                        onAction={() => rearrangeSpace(space, "up")}
-                      />
-                      <Action
-                        title="Move Space Down"
-                        icon={Icon.ArrowDown}
-                        shortcut={{ modifiers: ["cmd", "shift"], key: "arrowDown" }}
-                        onAction={() => rearrangeSpace(space, "down")}
-                      />
-                    </>
-                  </ActionPanel>
-                }
-              />
-            );
-          })}
-        </List.Section>
-      ))}
+      {hasMultipleDisplays
+        ? displayGroups.map((group) => (
+            <List.Section key={group.displayID} title={group.displayName}>
+              {group.items.map(renderSpace)}
+            </List.Section>
+          ))
+        : spaces.map(renderSpace)}
     </List>
   );
 }
