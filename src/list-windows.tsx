@@ -153,12 +153,21 @@ export default function Command() {
 
   async function handleWindowAction(entry: WindowEntry, action: SpaceAPIWindowAction) {
     try {
+      const prefs = getPreferenceValues<Preferences>();
+      const originalSpaces =
+        action === "quit" || !prefs.returnToOriginalSpace ? undefined : await getCurrentSpacesByDisplay();
       const actionLabel = getWindowActionLabel(action);
       if (action === "quit") {
         setTerminatingPIDs((previous) => new Set(previous).add(entry.pid));
       }
       const toast = await showToast({ style: Toast.Style.Animated, title: `${actionLabel}...` });
-      await executeWindowAction(entry.windowID, entry.pid, action);
+      try {
+        await executeWindowAction(entry.windowID, entry.pid, action);
+      } finally {
+        if (originalSpaces) {
+          await restoreSpacesByDisplay(originalSpaces);
+        }
+      }
       toast.style = Toast.Style.Success;
       toast.title = `${actionLabel} completed`;
       revalidate();
