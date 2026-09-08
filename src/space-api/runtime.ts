@@ -95,16 +95,6 @@ export async function handleDesktopRenamerError(error: unknown, errorMessage = "
         style: Toast.Style.Failure,
         title: "Command Failed",
         message: message || errorMessage,
-        primaryAction: {
-          title: "Open DesktopRenamer",
-          onAction: async () => {
-            try {
-              await open("/Applications/DesktopRenamer.app");
-            } catch {
-              await showToast({ style: Toast.Style.Failure, title: "Failed to launch app" });
-            }
-          },
-        },
       });
     }
   }
