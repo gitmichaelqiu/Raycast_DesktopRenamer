@@ -6,7 +6,6 @@ import {
   getCurrentSpacesByDisplay,
   restoreSpacesByDisplay,
   focusWindowOnSpace,
-  getCurrentSpaceIDs,
   executeWindowAction,
   SpaceAPIWindowAction,
   getWindowsSnapshot,
@@ -81,7 +80,7 @@ export default function Command() {
     try {
       const prefs = getPreferenceValues<Preferences>();
       const originalSpaces = await getCurrentSpacesByDisplay();
-      const targetId = (await getCurrentSpaceIDs())[0] ?? "";
+      const targetId = originalSpaces.spacesByDisplay[entry.space.displayID] ?? "";
       if (!targetId) {
         await showToast({ style: Toast.Style.Failure, title: "Could not determine current desktop" });
         return;
