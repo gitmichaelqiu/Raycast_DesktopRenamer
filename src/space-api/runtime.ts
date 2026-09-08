@@ -4,6 +4,8 @@ import { SPACE_API_ERROR_CODES, SpaceAPIProtocolError } from "./contract";
 
 export type CommunicationMethod = "automatic" | "spaceapi" | "applescript";
 
+const DESKTOP_RENAMER_BUNDLE_IDENTIFIERS = ["dev.mqiu.DesktopRenamer", "com.michaelqiu.DesktopRenamer"] as const;
+
 let installedApplicationLookup: Promise<boolean> | null = null;
 
 export function communicationMethod(): CommunicationMethod {
@@ -14,7 +16,9 @@ export function communicationMethod(): CommunicationMethod {
 export async function isDesktopRenamerInstalled(): Promise<boolean> {
   if (!installedApplicationLookup) {
     installedApplicationLookup = getApplications()
-      .then((applications) => applications.some((app) => app.bundleId === "com.michaelqiu.DesktopRenamer"))
+      .then((applications) =>
+        applications.some((app) => DESKTOP_RENAMER_BUNDLE_IDENTIFIERS.some((bundleID) => bundleID === app.bundleId)),
+      )
       .then((isInstalled) => {
         if (!isInstalled) installedApplicationLookup = null;
         return isInstalled;
