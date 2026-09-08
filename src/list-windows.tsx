@@ -249,7 +249,7 @@ export default function Command() {
                                 icon={
                                   currentSpaceIDs.has(targetSpace.id)
                                     ? { source: Icon.Circle, tintColor: Color.Blue }
-                                    : undefined
+                                    : Icon.Desktop
                                 }
                                 onAction={() => moveToDesktop(entry, targetSpace)}
                               />
