@@ -40,6 +40,8 @@ export function parseLegacySpaceSnapshotResult(raw: string): SpaceAPISnapshot {
             ? record.timestamp
             : new Date().toISOString(),
         currentSpaceIDs,
+        currentSpaceID: typeof record.currentSpaceID === "string" ? record.currentSpaceID : undefined,
+        currentDisplayID: typeof record.currentDisplayID === "string" ? record.currentDisplayID : undefined,
         currentSpaceName: typeof record.currentSpaceName === "string" ? record.currentSpaceName : "",
         spaces,
       };
@@ -63,6 +65,8 @@ export function parseLegacySpaceSnapshotResult(raw: string): SpaceAPISnapshot {
       .split(",")
       .map((spaceID) => spaceID.trim())
       .filter(Boolean),
+    currentSpaceID: undefined,
+    currentDisplayID: undefined,
     currentSpaceName,
     spaces,
   };

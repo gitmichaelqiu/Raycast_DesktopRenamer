@@ -183,6 +183,8 @@ export function parseSnapshot(value: unknown): SpaceAPISnapshot {
     revision: requiredNonNegativeInteger(record.revision, "revision"),
     timestamp: requiredString(record.timestamp, "timestamp"),
     currentSpaceIDs: requiredStringArray(record.currentSpaceIDs, "currentSpaceIDs"),
+    currentSpaceID: nullableString(record.currentSpaceID, "currentSpaceID") ?? undefined,
+    currentDisplayID: nullableString(record.currentDisplayID, "currentDisplayID") ?? undefined,
     currentSpaceName: requiredString(record.currentSpaceName, "currentSpaceName"),
     spaces: record.spaces.map(parseSpaceRecord),
   };

@@ -54,11 +54,13 @@ export function useSpaces() {
   let spaces: Space[] = [];
   let currentName = "";
   let currentId = "";
+  let activeSpaceID = "";
 
   if (data) {
     const snapshot: SpaceAPISnapshot = data;
     currentName = snapshot.currentSpaceName;
     currentId = snapshot.currentSpaceIDs.join(",");
+    activeSpaceID = snapshot.currentSpaceID ?? snapshot.currentSpaceIDs[0] ?? "";
     spaces = snapshot.spaces.map((space) => ({
       id: space.id,
       name: space.name || "Unknown",
@@ -76,6 +78,7 @@ export function useSpaces() {
     spaces,
     currentName,
     currentId,
+    activeSpaceID,
     displayGroups,
     hasMultipleDisplays: hasMultipleDisplays(spaces),
     isLoading,

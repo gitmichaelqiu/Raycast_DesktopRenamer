@@ -3,8 +3,8 @@ import { moveWindowToSpace, getCurrentSpacesByDisplay, restoreSpacesByDisplay } 
 import { isMoveTarget, useSpaces, Space, RenameSpaceForm } from "./spaces";
 
 export default function Command() {
-  const { spaces, displayGroups, hasMultipleDisplays, currentId, isLoading, revalidate } = useSpaces();
-  const currentSpaceId = currentId ? currentId.split(",")[0]?.trim() : null;
+  const { spaces, displayGroups, hasMultipleDisplays, activeSpaceID, isLoading, revalidate } = useSpaces();
+  const currentSpaceId = activeSpaceID || null;
   const currentSpace = currentSpaceId ? spaces.find((s) => s.id === currentSpaceId) : undefined;
 
   async function moveWindow(space: Space) {

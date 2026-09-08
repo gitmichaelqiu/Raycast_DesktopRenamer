@@ -191,6 +191,8 @@ export interface SpaceAPISnapshot {
   revision: number;
   timestamp: string;
   currentSpaceIDs: string[];
+  currentSpaceID?: string;
+  currentDisplayID?: string;
   currentSpaceName: string;
   spaces: SpaceAPISpaceRecord[];
 }
