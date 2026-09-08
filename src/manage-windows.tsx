@@ -48,11 +48,19 @@ export default function Command() {
   const { data, isLoading } = usePromise(async () => {
     return mapWindowsSnapshot(await getWindowsSnapshot());
   });
+  const { data: currentSpaces } = usePromise(async () => {
+    try {
+      return await getCurrentSpacesByDisplay();
+    } catch {
+      return { spacesByDisplay: {} };
+    }
+  });
 
   const spaces = data?.spaces ?? [];
   const rawWindows = data?.windows ?? [];
   const allWindows = rawWindows.filter((window) => !terminatingPIDs.has(window.pid));
   const showDisplaySections = hasMultipleDisplays(spaces);
+  const currentSpaceIDs = new Set(Object.values(currentSpaces?.spacesByDisplay ?? {}));
 
   useEffect(() => {
     if (!data) return;
@@ -287,7 +295,11 @@ export default function Command() {
                           <Action
                             key={targetSpace.id}
                             title={targetSpace.name}
-                            icon={Icon.Desktop}
+                            icon={
+                              currentSpaceIDs.has(targetSpace.id)
+                                ? { source: Icon.Circle, tintColor: Color.Blue }
+                                : Icon.Desktop
+                            }
                             onAction={() => stageAction(win, "move", targetSpace)}
                           />
                         );
