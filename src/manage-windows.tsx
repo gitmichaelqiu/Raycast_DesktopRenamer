@@ -151,6 +151,7 @@ export default function Command() {
         await delay(600); // Give Mission Control time to settle
 
         for (const action of sourceActions) {
+          let actionSucceeded = false;
           try {
             if (action.type === "move") {
               if (!action.targetSpace) {
@@ -181,13 +182,16 @@ export default function Command() {
               );
               await delay(400);
             }
+            actionSucceeded = true;
             totalExecuted++;
           } catch (error) {
             failures.push(`${getActionLabel(action.type)} on "${action.window.title}": ${describeBatchError(error)}`);
           } finally {
-            // A failed action may still have moved macOS to the target window's
-            // space before discovering that the action is unavailable.
-            if (["move", "enterFullScreen", "exitFullScreen"].includes(action.type)) {
+            // Only recover the source Space after a failed action. Switching
+            // back unconditionally races legacy AppleScript move requests and
+            // can interrupt the native unminimize → move → re-minimize
+            // transaction while it is still in progress.
+            if (!actionSucceeded && ["move", "enterFullScreen", "exitFullScreen"].includes(action.type)) {
               await switchToSpace(sourceId);
               await delay(600);
             }
