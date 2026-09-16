@@ -100,6 +100,8 @@ export default function Command() {
         pid: entry.pid,
         fromSpaceID: entry.space.id,
         targetSpaceID: targetId,
+        isMinimized: entry.isMinimized,
+        isHidden: entry.isHidden,
       });
       await delay(entry.space.isFullscreen === false ? 600 : 1750); // Wait for the backend's drag operation to complete
       if (prefs.returnToOriginalSpace) {
@@ -131,6 +133,8 @@ export default function Command() {
         pid: entry.pid,
         fromSpaceID: entry.space.id,
         targetSpaceID: targetSpace.id,
+        isMinimized: entry.isMinimized,
+        isHidden: entry.isHidden,
       });
 
       if (originalSpaces) {

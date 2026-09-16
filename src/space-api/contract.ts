@@ -34,7 +34,7 @@ export type SpaceAPIMethod =
   | "executeWindowAction"
   | "moveSpecificWindow";
 
-export type SpaceAPIParameters = Record<string, string | number>;
+export type SpaceAPIParameters = Record<string, string | number | boolean>;
 
 export type EmptySpaceAPIParameters = Record<string, never>;
 
@@ -64,7 +64,7 @@ export function getWindowActionLabel(action: SpaceAPIWindowAction): string {
   return SPACE_API_WINDOW_ACTION_LABELS[action];
 }
 
-export type SpaceAPIParameterKind = "string" | "positiveInteger" | "direction" | "windowAction";
+export type SpaceAPIParameterKind = "string" | "positiveInteger" | "boolean" | "direction" | "windowAction";
 
 export interface SpaceAPIMethodDefinition {
   parameters: Record<string, SpaceAPIParameterKind>;
@@ -95,7 +95,14 @@ export interface SpaceAPIMethodArguments {
   getWindows: EmptySpaceAPIParameters;
   focusWindow: { windowID: number; pid: number };
   executeWindowAction: { windowID: number; pid: number; action: SpaceAPIWindowAction };
-  moveSpecificWindow: { windowID: number; pid?: number; fromSpaceID: string; targetSpaceID: string };
+  moveSpecificWindow: {
+    windowID: number;
+    pid?: number;
+    fromSpaceID: string;
+    targetSpaceID: string;
+    isMinimized?: boolean;
+    isHidden?: boolean;
+  };
 }
 
 export const SPACE_API_ERROR_CODES = {
@@ -154,6 +161,8 @@ export const SPACE_API_METHOD_DEFINITIONS: Record<SpaceAPIMethod, SpaceAPIMethod
       pid: "positiveInteger",
       fromSpaceID: "string",
       targetSpaceID: "string",
+      isMinimized: "boolean",
+      isHidden: "boolean",
     },
     required: ["windowID", "fromSpaceID", "targetSpaceID"],
   },

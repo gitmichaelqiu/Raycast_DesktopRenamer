@@ -169,6 +169,8 @@ export default function Command() {
                 pid: action.window.pid,
                 fromSpaceID: action.window.space.id,
                 targetSpaceID: action.targetSpace.id,
+                isMinimized: action.window.isMinimized,
+                isHidden: action.window.isHidden,
               });
               await delay(isFullscreen === false ? 500 : 1700); // Wait for un-fullscreen (1.2s) + drag (0.5s)
             } else {

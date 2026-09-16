@@ -217,7 +217,14 @@ export async function executeWindowAction(
 }
 
 export async function moveSpecificWindow(
-  args: { windowID: number; pid?: number; fromSpaceID: string; targetSpaceID: string },
+  args: {
+    windowID: number;
+    pid?: number;
+    fromSpaceID: string;
+    targetSpaceID: string;
+    isMinimized?: boolean;
+    isHidden?: boolean;
+  },
   errorMessage = "Failed to move window",
 ): Promise<SpaceAPIOperationResult> {
   return await runDesktopRenamerMethod("moveSpecificWindow", args, errorMessage);
@@ -228,6 +235,8 @@ export async function moveSpecificWindowToSpace(args: {
   pid?: number;
   fromSpaceID: string;
   targetSpaceID: string;
+  isMinimized?: boolean;
+  isHidden?: boolean;
 }): Promise<SpaceAPIOperationResult> {
   return await moveSpecificWindow(args);
 }
