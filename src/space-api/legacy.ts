@@ -43,6 +43,12 @@ export function parseLegacySpaceSnapshotResult(raw: string): SpaceAPISnapshot {
         currentSpaceID: typeof record.currentSpaceID === "string" ? record.currentSpaceID : undefined,
         currentDisplayID: typeof record.currentDisplayID === "string" ? record.currentDisplayID : undefined,
         currentSpaceName: typeof record.currentSpaceName === "string" ? record.currentSpaceName : "",
+        movedWindowsCount:
+          typeof record.movedWindowsCount === "number" &&
+          Number.isSafeInteger(record.movedWindowsCount) &&
+          record.movedWindowsCount >= 0
+            ? record.movedWindowsCount
+            : 0,
         spaces,
       };
     } catch {
@@ -68,6 +74,7 @@ export function parseLegacySpaceSnapshotResult(raw: string): SpaceAPISnapshot {
     currentSpaceID: undefined,
     currentDisplayID: undefined,
     currentSpaceName,
+    movedWindowsCount: 0,
     spaces,
   };
 }

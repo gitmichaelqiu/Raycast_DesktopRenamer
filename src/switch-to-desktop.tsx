@@ -10,7 +10,8 @@ import {
 import { isMoveTarget, useSpaces, Space, RenameSpaceForm } from "./spaces";
 
 export default function Command() {
-  const { spaces, displayGroups, hasMultipleDisplays, currentId, isLoading, revalidate } = useSpaces();
+  const { spaces, displayGroups, hasMultipleDisplays, currentId, movedWindowsCount, isLoading, revalidate } =
+    useSpaces();
   const currentIds = currentId ? currentId.split(",").map((s) => s.trim()) : [];
   const currentSpace = spaces.find((s) => currentIds.includes(s.id));
   const [rearrangingSpaceID, setRearrangingSpaceID] = useState<string | null>(null);
@@ -119,7 +120,7 @@ export default function Command() {
             )}
             {space.isFullscreen !== true && (
               <Action
-                title="Restore Windows Moved by Space Lock"
+                title={`Restore Windows Moved by Space Lock (${movedWindowsCount})`}
                 icon={Icon.ArrowClockwise}
                 onAction={restoreLockedWindows}
               />

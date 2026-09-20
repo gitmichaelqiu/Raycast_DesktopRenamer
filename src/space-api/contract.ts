@@ -210,6 +210,7 @@ export interface SpaceAPISnapshot {
   currentSpaceID?: string;
   currentDisplayID?: string;
   currentSpaceName: string;
+  movedWindowsCount: number;
   spaces: SpaceAPISpaceRecord[];
 }
 

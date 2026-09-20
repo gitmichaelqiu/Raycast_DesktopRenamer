@@ -56,12 +56,14 @@ export function useSpaces() {
   let currentName = "";
   let currentId = "";
   let activeSpaceID = "";
+  let movedWindowsCount = 0;
 
   if (data) {
     const snapshot: SpaceAPISnapshot = data;
     currentName = snapshot.currentSpaceName;
     currentId = snapshot.currentSpaceIDs.join(",");
     activeSpaceID = snapshot.currentSpaceID ?? snapshot.currentSpaceIDs[0] ?? "";
+    movedWindowsCount = snapshot.movedWindowsCount;
     spaces = snapshot.spaces.map((space) => ({
       id: space.id,
       name: space.name || "Unknown",
@@ -83,6 +85,7 @@ export function useSpaces() {
     activeSpaceID,
     displayGroups,
     hasMultipleDisplays: hasMultipleDisplays(spaces),
+    movedWindowsCount,
     isLoading,
     revalidate,
   };
