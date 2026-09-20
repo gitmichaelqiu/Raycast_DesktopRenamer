@@ -10,6 +10,7 @@ export interface Space {
   num: number;
   isFullscreen: boolean | undefined;
   appPath?: string;
+  isLocked: boolean;
 }
 
 export interface DisplayGroup<T> {
@@ -69,6 +70,7 @@ export function useSpaces() {
       num: space.number,
       isFullscreen: space.isFullscreen,
       appPath: space.appPath ?? undefined,
+      isLocked: space.isLocked,
     }));
   }
 

@@ -20,6 +20,7 @@ export function parseSpaceAPICommand(
   if (command === "get all spaces") return { name: "getAllSpaces", arguments: {} };
   if (command === "move window next") return { name: "moveWindowNext", arguments: {} };
   if (command === "move window previous") return { name: "moveWindowPrevious", arguments: {} };
+  if (command === "restore moved windows") return { name: "restoreMovedWindows", arguments: {} };
   if (command === "reload space labels") return { name: "reloadSpaceLabels", arguments: {} };
   if (command === "toggle menubar") return { name: "toggleMenubar", arguments: {} };
   if (command === "toggle launcher") return { name: "toggleLauncher", arguments: {} };
@@ -30,6 +31,8 @@ export function parseSpaceAPICommand(
 
   let match = command.match(/^switch to space "(.*)"$/);
   if (match) return { name: "switchToSpace", arguments: { spaceID: quoted(match[1]) } };
+  match = command.match(/^toggle lock space "(.*)"$/);
+  if (match) return { name: "toggleLockSpace", arguments: { spaceID: quoted(match[1]) } };
   match = command.match(/^rename current space "(.*)"$/);
   if (match) return { name: "renameCurrentSpace", arguments: { name: quoted(match[1]) } };
   match = command.match(/^rename space "(.*)" to "(.*)"$/);
@@ -94,6 +97,10 @@ export function makeAppleScriptForMethod(command: SpaceAPIMethod, arguments_: Sp
       return 'tell application "DesktopRenamer" to get windows';
     case "switchToSpace":
       return `tell application "DesktopRenamer" to switch to space "${stringValue("spaceID")}"`;
+    case "toggleLockSpace":
+      return `tell application "DesktopRenamer" to toggle lock space "${stringValue("spaceID")}"`;
+    case "restoreMovedWindows":
+      return 'tell application "DesktopRenamer" to restore moved windows';
     case "renameCurrentSpace":
       return `tell application "DesktopRenamer" to rename current space "${stringValue("name")}"`;
     case "renameSpace":

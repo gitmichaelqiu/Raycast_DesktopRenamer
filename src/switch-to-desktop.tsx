@@ -1,6 +1,12 @@
 import { List, ActionPanel, Action, Icon, Color, showToast, Toast } from "@raycast/api";
 import { useState } from "react";
-import { switchToSpace, moveWindowToSpace, rearrangeSpace as rearrangeDesktopSpace } from "./utils";
+import {
+  switchToSpace,
+  moveWindowToSpace,
+  rearrangeSpace as rearrangeDesktopSpace,
+  toggleLockSpace,
+  restoreMovedWindows,
+} from "./utils";
 import { isMoveTarget, useSpaces, Space, RenameSpaceForm } from "./spaces";
 
 export default function Command() {
@@ -13,6 +19,26 @@ export default function Command() {
     try {
       await switchToSpace(space.id);
       await new Promise((resolve) => setTimeout(resolve, 500));
+      await revalidate();
+    } catch {
+      // Handled by utils
+    }
+  }
+
+  async function toggleSpaceLock(space: Space) {
+    try {
+      await toggleLockSpace(space.id);
+      await showToast({ style: Toast.Style.Success, title: space.isLocked ? "Space unlocked" : "Space locked" });
+      await revalidate();
+    } catch {
+      // Handled by utils
+    }
+  }
+
+  async function restoreLockedWindows() {
+    try {
+      await restoreMovedWindows();
+      await showToast({ style: Toast.Style.Success, title: "Restoring windows moved by Space Lock" });
       await revalidate();
     } catch {
       // Handled by utils
@@ -60,10 +86,12 @@ export default function Command() {
 
   function renderSpace(space: Space) {
     const isCurrent = currentIds.includes(space.id);
+    const isLocked = space.isFullscreen !== true && space.isLocked;
+    const title = isLocked ? `${space.name} 🔒` : space.name;
     return (
       <List.Item
         key={space.id}
-        title={space.name}
+        title={title}
         subtitle={`Space ${space.num}`}
         icon={
           space.isFullscreen && space.appPath
@@ -80,6 +108,20 @@ export default function Command() {
                 icon={Icon.Window}
                 shortcut={{ modifiers: ["cmd"], key: "return" }}
                 onAction={() => moveWindow(space)}
+              />
+            )}
+            {space.isFullscreen !== true && (
+              <Action
+                title={isLocked ? "Unlock Space" : "Lock Space"}
+                icon={isLocked ? Icon.LockUnlocked : Icon.Lock}
+                onAction={() => toggleSpaceLock(space)}
+              />
+            )}
+            {space.isFullscreen !== true && (
+              <Action
+                title="Restore Windows Moved by Space Lock"
+                icon={Icon.ArrowClockwise}
+                onAction={restoreLockedWindows}
               />
             )}
             {space.isFullscreen !== true && (

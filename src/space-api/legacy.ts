@@ -93,6 +93,7 @@ function parseLegacySpaceObject(value: unknown): SpaceAPISpaceRecord {
       typeof record.globalShortcutNumber === "number" && Number.isSafeInteger(record.globalShortcutNumber)
         ? record.globalShortcutNumber
         : null,
+    isLocked: record.isLocked === true || record.isLocked === 1,
   };
 }
 
@@ -120,6 +121,7 @@ export function parseLegacySpaceRecords(raw: string): SpaceAPISpaceRecord[] {
         appName: null,
         appPath: parts[5] || null,
         globalShortcutNumber: null,
+        isLocked: parts.length >= 7 && parts[6] === "1",
       },
     ];
   });

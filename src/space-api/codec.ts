@@ -150,6 +150,7 @@ export function parseSpaceRecord(value: unknown, index: number): SpaceAPISpaceRe
     appName,
     appPath,
     globalShortcutNumber,
+    isLocked: record.isLocked === undefined ? false : requiredBoolean(record.isLocked, `spaces[${index}].isLocked`),
   };
 }
 

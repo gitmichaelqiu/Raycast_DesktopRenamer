@@ -16,6 +16,8 @@ export type SpaceAPIMethod =
   | "getCurrentSpaceID"
   | "getAllSpaces"
   | "switchToSpace"
+  | "toggleLockSpace"
+  | "restoreMovedWindows"
   | "renameCurrentSpace"
   | "renameSpace"
   | "rearrangeSpace"
@@ -79,6 +81,8 @@ export interface SpaceAPIMethodArguments {
   getCurrentSpaceID: EmptySpaceAPIParameters;
   getAllSpaces: EmptySpaceAPIParameters;
   switchToSpace: { spaceID: string };
+  toggleLockSpace: { spaceID: string };
+  restoreMovedWindows: EmptySpaceAPIParameters;
   renameCurrentSpace: { name: string };
   renameSpace: { spaceID: string; name: string };
   rearrangeSpace: { spaceID: string; direction: "up" | "down" };
@@ -127,6 +131,8 @@ export const SPACE_API_METHOD_DEFINITIONS: Record<SpaceAPIMethod, SpaceAPIMethod
   getCurrentSpaceID: { parameters: {}, required: [] },
   getAllSpaces: { parameters: {}, required: [] },
   switchToSpace: { parameters: { spaceID: "string" }, required: ["spaceID"] },
+  toggleLockSpace: { parameters: { spaceID: "string" }, required: ["spaceID"] },
+  restoreMovedWindows: { parameters: {}, required: [] },
   renameCurrentSpace: { parameters: { name: "string" }, required: ["name"] },
   renameSpace: {
     parameters: { spaceID: "string", name: "string" },
@@ -193,6 +199,7 @@ export interface SpaceAPISpaceRecord {
   appName: string | null;
   appPath: string | null;
   globalShortcutNumber: number | null;
+  isLocked: boolean;
 }
 
 export interface SpaceAPISnapshot {
@@ -268,6 +275,8 @@ export interface SpaceAPIMethodResults {
   getCurrentSpaceID: string[];
   getAllSpaces: SpaceAPISpaceRecord[];
   switchToSpace: SpaceAPIOperationResult;
+  toggleLockSpace: SpaceAPIOperationResult;
+  restoreMovedWindows: SpaceAPIOperationResult;
   renameCurrentSpace: SpaceAPIOperationResult;
   renameSpace: SpaceAPIOperationResult;
   rearrangeSpace: SpaceAPIOperationResult;

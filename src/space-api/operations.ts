@@ -130,6 +130,19 @@ export async function switchToSpace(
   return await runDesktopRenamerMethod("switchToSpace", { spaceID }, errorMessage);
 }
 
+export async function toggleLockSpace(
+  spaceID: string,
+  errorMessage = "Failed to toggle Space Lock",
+): Promise<SpaceAPIOperationResult> {
+  return await runDesktopRenamerMethod("toggleLockSpace", { spaceID }, errorMessage);
+}
+
+export async function restoreMovedWindows(
+  errorMessage = "Failed to restore moved windows",
+): Promise<SpaceAPIOperationResult> {
+  return await runDesktopRenamerMethod("restoreMovedWindows", {}, errorMessage);
+}
+
 export async function renameCurrentSpace(
   name: string,
   errorMessage = "Failed to rename space",
