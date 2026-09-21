@@ -150,6 +150,7 @@ export function parseSpaceRecord(value: unknown, index: number): SpaceAPISpaceRe
     appName,
     appPath,
     globalShortcutNumber,
+    isLocked: record.isLocked === undefined ? false : requiredBoolean(record.isLocked, `spaces[${index}].isLocked`),
   };
 }
 
@@ -186,6 +187,10 @@ export function parseSnapshot(value: unknown): SpaceAPISnapshot {
     currentSpaceID: nullableString(record.currentSpaceID, "currentSpaceID") ?? undefined,
     currentDisplayID: nullableString(record.currentDisplayID, "currentDisplayID") ?? undefined,
     currentSpaceName: requiredString(record.currentSpaceName, "currentSpaceName"),
+    movedWindowsCount:
+      record.movedWindowsCount === undefined
+        ? 0
+        : requiredNonNegativeInteger(record.movedWindowsCount, "movedWindowsCount"),
     spaces: record.spaces.map(parseSpaceRecord),
   };
 }

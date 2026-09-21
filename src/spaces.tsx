@@ -10,6 +10,7 @@ export interface Space {
   num: number;
   isFullscreen: boolean | undefined;
   appPath?: string;
+  isLocked: boolean;
 }
 
 export interface DisplayGroup<T> {
@@ -55,12 +56,14 @@ export function useSpaces() {
   let currentName = "";
   let currentId = "";
   let activeSpaceID = "";
+  let movedWindowsCount = 0;
 
   if (data) {
     const snapshot: SpaceAPISnapshot = data;
     currentName = snapshot.currentSpaceName;
     currentId = snapshot.currentSpaceIDs.join(",");
     activeSpaceID = snapshot.currentSpaceID ?? snapshot.currentSpaceIDs[0] ?? "";
+    movedWindowsCount = snapshot.movedWindowsCount;
     spaces = snapshot.spaces.map((space) => ({
       id: space.id,
       name: space.name || "Unknown",
@@ -69,6 +72,7 @@ export function useSpaces() {
       num: space.number,
       isFullscreen: space.isFullscreen,
       appPath: space.appPath ?? undefined,
+      isLocked: space.isLocked,
     }));
   }
 
@@ -81,6 +85,7 @@ export function useSpaces() {
     activeSpaceID,
     displayGroups,
     hasMultipleDisplays: hasMultipleDisplays(spaces),
+    movedWindowsCount,
     isLoading,
     revalidate,
   };

@@ -43,6 +43,12 @@ export function parseLegacySpaceSnapshotResult(raw: string): SpaceAPISnapshot {
         currentSpaceID: typeof record.currentSpaceID === "string" ? record.currentSpaceID : undefined,
         currentDisplayID: typeof record.currentDisplayID === "string" ? record.currentDisplayID : undefined,
         currentSpaceName: typeof record.currentSpaceName === "string" ? record.currentSpaceName : "",
+        movedWindowsCount:
+          typeof record.movedWindowsCount === "number" &&
+          Number.isSafeInteger(record.movedWindowsCount) &&
+          record.movedWindowsCount >= 0
+            ? record.movedWindowsCount
+            : 0,
         spaces,
       };
     } catch {
@@ -68,6 +74,7 @@ export function parseLegacySpaceSnapshotResult(raw: string): SpaceAPISnapshot {
     currentSpaceID: undefined,
     currentDisplayID: undefined,
     currentSpaceName,
+    movedWindowsCount: 0,
     spaces,
   };
 }
@@ -93,6 +100,7 @@ function parseLegacySpaceObject(value: unknown): SpaceAPISpaceRecord {
       typeof record.globalShortcutNumber === "number" && Number.isSafeInteger(record.globalShortcutNumber)
         ? record.globalShortcutNumber
         : null,
+    isLocked: record.isLocked === true || record.isLocked === 1,
   };
 }
 
@@ -120,6 +128,7 @@ export function parseLegacySpaceRecords(raw: string): SpaceAPISpaceRecord[] {
         appName: null,
         appPath: parts[5] || null,
         globalShortcutNumber: null,
+        isLocked: parts.length >= 7 && parts[6] === "1",
       },
     ];
   });

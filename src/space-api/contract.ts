@@ -16,6 +16,8 @@ export type SpaceAPIMethod =
   | "getCurrentSpaceID"
   | "getAllSpaces"
   | "switchToSpace"
+  | "toggleLockSpace"
+  | "restoreMovedWindows"
   | "renameCurrentSpace"
   | "renameSpace"
   | "rearrangeSpace"
@@ -34,7 +36,7 @@ export type SpaceAPIMethod =
   | "executeWindowAction"
   | "moveSpecificWindow";
 
-export type SpaceAPIParameters = Record<string, string | number>;
+export type SpaceAPIParameters = Record<string, string | number | boolean>;
 
 export type EmptySpaceAPIParameters = Record<string, never>;
 
@@ -64,7 +66,7 @@ export function getWindowActionLabel(action: SpaceAPIWindowAction): string {
   return SPACE_API_WINDOW_ACTION_LABELS[action];
 }
 
-export type SpaceAPIParameterKind = "string" | "positiveInteger" | "direction" | "windowAction";
+export type SpaceAPIParameterKind = "string" | "positiveInteger" | "boolean" | "direction" | "windowAction";
 
 export interface SpaceAPIMethodDefinition {
   parameters: Record<string, SpaceAPIParameterKind>;
@@ -79,6 +81,8 @@ export interface SpaceAPIMethodArguments {
   getCurrentSpaceID: EmptySpaceAPIParameters;
   getAllSpaces: EmptySpaceAPIParameters;
   switchToSpace: { spaceID: string };
+  toggleLockSpace: { spaceID: string };
+  restoreMovedWindows: EmptySpaceAPIParameters;
   renameCurrentSpace: { name: string };
   renameSpace: { spaceID: string; name: string };
   rearrangeSpace: { spaceID: string; direction: "up" | "down" };
@@ -95,7 +99,14 @@ export interface SpaceAPIMethodArguments {
   getWindows: EmptySpaceAPIParameters;
   focusWindow: { windowID: number; pid: number };
   executeWindowAction: { windowID: number; pid: number; action: SpaceAPIWindowAction };
-  moveSpecificWindow: { windowID: number; pid?: number; fromSpaceID: string; targetSpaceID: string };
+  moveSpecificWindow: {
+    windowID: number;
+    pid?: number;
+    fromSpaceID: string;
+    targetSpaceID: string;
+    isMinimized?: boolean;
+    isHidden?: boolean;
+  };
 }
 
 export const SPACE_API_ERROR_CODES = {
@@ -120,6 +131,8 @@ export const SPACE_API_METHOD_DEFINITIONS: Record<SpaceAPIMethod, SpaceAPIMethod
   getCurrentSpaceID: { parameters: {}, required: [] },
   getAllSpaces: { parameters: {}, required: [] },
   switchToSpace: { parameters: { spaceID: "string" }, required: ["spaceID"] },
+  toggleLockSpace: { parameters: { spaceID: "string" }, required: ["spaceID"] },
+  restoreMovedWindows: { parameters: {}, required: [] },
   renameCurrentSpace: { parameters: { name: "string" }, required: ["name"] },
   renameSpace: {
     parameters: { spaceID: "string", name: "string" },
@@ -154,6 +167,8 @@ export const SPACE_API_METHOD_DEFINITIONS: Record<SpaceAPIMethod, SpaceAPIMethod
       pid: "positiveInteger",
       fromSpaceID: "string",
       targetSpaceID: "string",
+      isMinimized: "boolean",
+      isHidden: "boolean",
     },
     required: ["windowID", "fromSpaceID", "targetSpaceID"],
   },
@@ -184,6 +199,7 @@ export interface SpaceAPISpaceRecord {
   appName: string | null;
   appPath: string | null;
   globalShortcutNumber: number | null;
+  isLocked: boolean;
 }
 
 export interface SpaceAPISnapshot {
@@ -194,6 +210,7 @@ export interface SpaceAPISnapshot {
   currentSpaceID?: string;
   currentDisplayID?: string;
   currentSpaceName: string;
+  movedWindowsCount: number;
   spaces: SpaceAPISpaceRecord[];
 }
 
@@ -259,6 +276,8 @@ export interface SpaceAPIMethodResults {
   getCurrentSpaceID: string[];
   getAllSpaces: SpaceAPISpaceRecord[];
   switchToSpace: SpaceAPIOperationResult;
+  toggleLockSpace: SpaceAPIOperationResult;
+  restoreMovedWindows: SpaceAPIOperationResult;
   renameCurrentSpace: SpaceAPIOperationResult;
   renameSpace: SpaceAPIOperationResult;
   rearrangeSpace: SpaceAPIOperationResult;

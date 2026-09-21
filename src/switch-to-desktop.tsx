@@ -1,10 +1,17 @@
 import { List, ActionPanel, Action, Icon, Color, showToast, Toast } from "@raycast/api";
 import { useState } from "react";
-import { switchToSpace, moveWindowToSpace, rearrangeSpace as rearrangeDesktopSpace } from "./utils";
+import {
+  switchToSpace,
+  moveWindowToSpace,
+  rearrangeSpace as rearrangeDesktopSpace,
+  toggleLockSpace,
+  restoreMovedWindows,
+} from "./utils";
 import { isMoveTarget, useSpaces, Space, RenameSpaceForm } from "./spaces";
 
 export default function Command() {
-  const { spaces, displayGroups, hasMultipleDisplays, currentId, isLoading, revalidate } = useSpaces();
+  const { spaces, displayGroups, hasMultipleDisplays, currentId, movedWindowsCount, isLoading, revalidate } =
+    useSpaces();
   const currentIds = currentId ? currentId.split(",").map((s) => s.trim()) : [];
   const currentSpace = spaces.find((s) => currentIds.includes(s.id));
   const [rearrangingSpaceID, setRearrangingSpaceID] = useState<string | null>(null);
@@ -13,6 +20,26 @@ export default function Command() {
     try {
       await switchToSpace(space.id);
       await new Promise((resolve) => setTimeout(resolve, 500));
+      await revalidate();
+    } catch {
+      // Handled by utils
+    }
+  }
+
+  async function toggleSpaceLock(space: Space) {
+    try {
+      await toggleLockSpace(space.id);
+      await showToast({ style: Toast.Style.Success, title: space.isLocked ? "Space unlocked" : "Space locked" });
+      await revalidate();
+    } catch {
+      // Handled by utils
+    }
+  }
+
+  async function restoreLockedWindows() {
+    try {
+      await restoreMovedWindows();
+      await showToast({ style: Toast.Style.Success, title: "Restoring windows moved by Space Lock" });
       await revalidate();
     } catch {
       // Handled by utils
@@ -60,10 +87,12 @@ export default function Command() {
 
   function renderSpace(space: Space) {
     const isCurrent = currentIds.includes(space.id);
+    const isLocked = space.isFullscreen !== true && space.isLocked;
+    const title = isLocked ? `${space.name} 🔒` : space.name;
     return (
       <List.Item
         key={space.id}
-        title={space.name}
+        title={title}
         subtitle={`Space ${space.num}`}
         icon={
           space.isFullscreen && space.appPath
@@ -83,25 +112,43 @@ export default function Command() {
               />
             )}
             {space.isFullscreen !== true && (
-              <Action.Push
-                title="Rename Space"
-                shortcut={{ modifiers: ["cmd"], key: "r" }}
-                icon={Icon.Pencil}
-                target={<RenameSpaceForm space={space} onRename={revalidate} />}
-              />
+              <ActionPanel.Section>
+                <Action
+                  title={isLocked ? "Unlock Space" : "Lock Space"}
+                  icon={isLocked ? Icon.LockUnlocked : Icon.Lock}
+                  shortcut={{ modifiers: ["cmd"], key: "l" }}
+                  onAction={() => toggleSpaceLock(space)}
+                />
+                <Action
+                  title={`Restore Moved Windows (${movedWindowsCount})`}
+                  icon={Icon.ArrowClockwise}
+                  shortcut={{ modifiers: ["cmd"], key: "z" }}
+                  onAction={restoreLockedWindows}
+                />
+              </ActionPanel.Section>
             )}
-            <Action
-              title="Move Space up"
-              icon={Icon.ArrowUp}
-              shortcut={{ modifiers: ["cmd", "shift"], key: "arrowUp" }}
-              onAction={() => rearrangeSpace(space, "up")}
-            />
-            <Action
-              title="Move Space Down"
-              icon={Icon.ArrowDown}
-              shortcut={{ modifiers: ["cmd", "shift"], key: "arrowDown" }}
-              onAction={() => rearrangeSpace(space, "down")}
-            />
+            {space.isFullscreen !== true && (
+              <ActionPanel.Section>
+                <Action.Push
+                  title="Rename Space"
+                  shortcut={{ modifiers: ["cmd"], key: "r" }}
+                  icon={Icon.Pencil}
+                  target={<RenameSpaceForm space={space} onRename={revalidate} />}
+                />
+                <Action
+                  title="Move Space up"
+                  icon={Icon.ArrowUp}
+                  shortcut={{ modifiers: ["cmd", "shift"], key: "arrowUp" }}
+                  onAction={() => rearrangeSpace(space, "up")}
+                />
+                <Action
+                  title="Move Space Down"
+                  icon={Icon.ArrowDown}
+                  shortcut={{ modifiers: ["cmd", "shift"], key: "arrowDown" }}
+                  onAction={() => rearrangeSpace(space, "down")}
+                />
+              </ActionPanel.Section>
+            )}
           </ActionPanel>
         }
       />

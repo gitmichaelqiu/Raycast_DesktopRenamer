@@ -236,6 +236,17 @@ export function normalizeMethodArguments(command: SpaceAPIMethod, arguments_: un
         normalized[parameter] = numberValue;
         break;
       }
+      case "boolean":
+        if (typeof value !== "boolean") {
+          throw invalidMethodArgument(
+            command,
+            parameter,
+            parameterKindDescription(kind),
+            `Parameter '${parameter}' must be a Boolean.`,
+          );
+        }
+        normalized[parameter] = value;
+        break;
       case "direction":
         if (typeof value !== "string" || !["up", "down"].includes(value.toLowerCase())) {
           throw invalidMethodArgument(
@@ -269,6 +280,8 @@ function parameterKindDescription(kind: SpaceAPIParameterKind): string {
       return "a non-empty string";
     case "positiveInteger":
       return "a positive integer";
+    case "boolean":
+      return "a Boolean";
     case "direction":
       return "one of: up, down";
     case "windowAction":
