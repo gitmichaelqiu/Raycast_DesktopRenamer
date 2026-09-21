@@ -116,6 +116,7 @@ export default function Command() {
                 <Action
                   title={isLocked ? "Unlock Space" : "Lock Space"}
                   icon={isLocked ? Icon.LockUnlocked : Icon.Lock}
+                  shortcut={{ modifiers: ["cmd"], key: "l" }}
                   onAction={() => toggleSpaceLock(space)}
                 />
                 <Action
