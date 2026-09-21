@@ -7,8 +7,13 @@
 - Improved window moves, window actions, and batch operations across spaces and displays
 - Improved desktop grouping, current-desktop indicators, and app icons in window pickers
 - Migrated communication to the structured SpaceAPI while retaining compatibility with older installations
+- Preserved compatibility with legacy DesktopRenamer installations while preferring the current SpaceAPI notification namespace
 
-## [Window Actions] - {2026-08-03}
+## [Fix] - 2026-08-21
+
+- Reduced background desktop status refreshes to once per minute.
+
+## [Window Actions] - 2026-08-03
 
 - Added window actions to `Batch Move Windows` and `List Windows` commands
 - Added displaying app icon for full screen desktops
