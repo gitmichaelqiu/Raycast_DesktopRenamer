@@ -1,7 +1,7 @@
 import { runAppleScript } from "@raycast/utils";
 import { SpaceAPIProtocolError } from "./contract";
 import { isReadSpaceAPIMethod } from "./codec";
-import { runLegacySpaceAPICommand } from "./legacy";
+import { runLegacySpaceAPICommandWithCompatibility } from "./legacy";
 import { parseSpaceAPICommand } from "./script";
 import { handleDesktopRenamerError, communicationMethod, requireDesktopRenamerInstalled } from "./runtime";
 import { normalizeMethodArguments, runDesktopRenamerScript, stringifyLegacyParameters } from "./transport";
@@ -23,7 +23,7 @@ export async function runDesktopRenamerCommand(command: string, errorMessage = "
         // its delimiter/string result shape stable; typed callers should use
         // runDesktopRenamerMethod instead.
         const parameters = normalizeMethodArguments(apiCommand.name, apiCommand.arguments);
-        return await runLegacySpaceAPICommand(apiCommand.name, stringifyLegacyParameters(parameters));
+        return await runLegacySpaceAPICommandWithCompatibility(apiCommand.name, stringifyLegacyParameters(parameters));
       }
     } catch (error) {
       if (

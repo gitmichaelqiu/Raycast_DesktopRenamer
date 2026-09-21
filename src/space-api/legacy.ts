@@ -2,10 +2,13 @@ import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 import {
+  LEGACY_DESKTOP_RENAMER_API_PREFIX,
   PREFERRED_DESKTOP_RENAMER_API_PREFIX,
   SPACE_API_ERROR_CODES,
+  SpaceAPIProtocolError,
   READ_REQUEST_TIMEOUT_MS,
   OPERATION_REQUEST_TIMEOUT_MS,
+  type SpaceAPINamespace,
   type SpaceAPISnapshot,
   type SpaceAPISpaceRecord,
   type SpaceAPIWindowRecord,
@@ -16,6 +19,8 @@ import { isReadSpaceAPIMethod, isRecord, protocolError } from "./codec";
 const execFileAsync = promisify(execFile);
 const SPACE_API_COMMAND_NOTIFICATION = `${PREFERRED_DESKTOP_RENAMER_API_PREFIX}.PerformCommand`;
 const SPACE_API_RESULT_NOTIFICATION = `${PREFERRED_DESKTOP_RENAMER_API_PREFIX}.CommandResult`;
+const LEGACY_SPACE_API_COMMAND_NOTIFICATION = `${LEGACY_DESKTOP_RENAMER_API_PREFIX}.PerformCommand`;
+const LEGACY_SPACE_API_RESULT_NOTIFICATION = `${LEGACY_DESKTOP_RENAMER_API_PREFIX}.CommandResult`;
 
 export function parseLegacySpaceSnapshotResult(raw: string): SpaceAPISnapshot {
   const trimmed = raw.trim();
@@ -180,10 +185,14 @@ export function parseLegacyWindowsSnapshot(raw: string): SpaceAPIWindowsSnapshot
   };
 }
 
-export async function runLegacySpaceAPICommand(command: string, arguments_: Record<string, string>): Promise<string> {
+export async function runLegacySpaceAPICommand(
+  command: string,
+  arguments_: Record<string, string>,
+  namespace: SpaceAPINamespace = "preferred",
+): Promise<string> {
   const requestID = randomUUID();
   const timeoutMs = isReadSpaceAPIMethod(command) ? READ_REQUEST_TIMEOUT_MS : OPERATION_REQUEST_TIMEOUT_MS;
-  const script = makeLegacySpaceAPIJXA(requestID, command, arguments_, timeoutMs);
+  const script = makeLegacySpaceAPIJXA(requestID, command, arguments_, timeoutMs, namespace);
   let stdout: string;
   let stderr: string;
   try {
@@ -258,18 +267,42 @@ export async function runLegacySpaceAPICommand(command: string, arguments_: Reco
   return typeof response.result === "string" ? response.result : "";
 }
 
+export async function runLegacySpaceAPICommandWithCompatibility(
+  command: string,
+  arguments_: Record<string, string>,
+): Promise<string> {
+  try {
+    return await runLegacySpaceAPICommand(command, arguments_, "preferred");
+  } catch (error) {
+    if (
+      !(error instanceof SpaceAPIProtocolError) ||
+      !error.canFallback ||
+      error.code !== SPACE_API_ERROR_CODES.invalidRequest
+    ) {
+      throw error;
+    }
+    return await runLegacySpaceAPICommand(command, arguments_, "legacy");
+  }
+}
+
 function makeLegacySpaceAPIJXA(
   requestID: string,
   command: string,
   arguments_: Record<string, string>,
   timeoutMs: number,
+  namespace: SpaceAPINamespace,
 ): string {
   const requestObject = { requestID, command, arguments: arguments_ };
+  const commandNotification =
+    namespace === "legacy" ? LEGACY_SPACE_API_COMMAND_NOTIFICATION : SPACE_API_COMMAND_NOTIFICATION;
+  const resultNotification =
+    namespace === "legacy" ? LEGACY_SPACE_API_RESULT_NOTIFICATION : SPACE_API_RESULT_NOTIFICATION;
+
   return `
 ObjC.import('Foundation');
 const requestObject = ${JSON.stringify(requestObject)};
 const center = $.NSDistributedNotificationCenter.defaultCenter;
-const resultName = '${SPACE_API_RESULT_NOTIFICATION}';
+const resultName = ${JSON.stringify(resultNotification)};
 let response = null;
 let finished = false;
 const observer = center.addObserverForNameObjectQueueUsingBlock(
@@ -289,7 +322,7 @@ const userInfo = $.NSMutableDictionary.dictionary;
 userInfo.setObjectForKey(requestObject.requestID, 'requestID');
 userInfo.setObjectForKey(requestObject.command, 'command');
 userInfo.setObjectForKey(JSON.stringify(requestObject.arguments), 'argumentsJSON');
-center.postNotificationNameObjectUserInfoDeliverImmediately('${SPACE_API_COMMAND_NOTIFICATION}', undefined, userInfo, true);
+center.postNotificationNameObjectUserInfoDeliverImmediately(${JSON.stringify(commandNotification)}, undefined, userInfo, true);
 const deadline = Date.now() + ${timeoutMs};
 while (!finished && Date.now() < deadline) {
   $.NSRunLoop.currentRunLoop.runUntilDate($.NSDate.dateWithTimeIntervalSinceNow(0.01));

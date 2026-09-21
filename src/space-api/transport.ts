@@ -13,6 +13,7 @@ import {
   STRUCTURED_READ_METHODS,
   SpaceAPIProtocolError,
   type SpaceAPIInfo,
+  type SpaceAPINamespace,
   type SpaceAPIMethod,
   type SpaceAPIMethodArguments,
   type SpaceAPIMethodResults,
@@ -37,6 +38,7 @@ import {
   parseLegacySpaceSnapshotResult,
   parseLegacyWindowsSnapshot,
   runLegacySpaceAPICommand,
+  runLegacySpaceAPICommandWithCompatibility,
 } from "./legacy";
 import { makeAppleScriptForMethod } from "./script";
 import { makeStructuredSpaceAPIJXA } from "./jxa";
@@ -50,6 +52,7 @@ import {
 const execFileAsync = promisify(execFile);
 let structuredAPIInfoLookup: Promise<SpaceAPIInfo> | null = null;
 let structuredAPIMaxPayloadBytes = MAX_STRUCTURED_PAYLOAD_BYTES;
+let structuredAPINamespace: SpaceAPINamespace | null = null;
 
 export interface DesktopRenamerRequestOptions {
   showErrorToast?: boolean;
@@ -89,10 +92,10 @@ export async function runDesktopRenamerScript(
 
 export async function runSpaceAPIForScript(scriptContent: string): Promise<string | null> {
   if (scriptContent.includes("get windows")) {
-    return await runLegacySpaceAPICommand("getWindows", {});
+    return await runLegacySpaceAPICommandWithCompatibility("getWindows", {});
   }
   if (scriptContent.includes("get all spaces") && scriptContent.includes("get current space name")) {
-    return await runLegacySpaceAPICommand("getSpaceSnapshot", {});
+    return await runLegacySpaceAPICommandWithCompatibility("getSpaceSnapshot", {});
   }
   return null;
 }
@@ -107,7 +110,7 @@ async function runSpaceAPIMethod(
     info = await getStructuredAPIInfo();
   } catch (error) {
     if (fallbackToLegacy && error instanceof SpaceAPIProtocolError && error.canFallback) {
-      return await runLegacySpaceAPICommand(command, stringifyLegacyParameters(arguments_));
+      return await runLegacySpaceAPICommandWithCompatibility(command, stringifyLegacyParameters(arguments_));
     }
     throw error;
   }
@@ -118,7 +121,11 @@ async function runSpaceAPIMethod(
 
   if (!info.supportedMethods.includes(command)) {
     if (fallbackToLegacy && info.legacyNotifications) {
-      return await runLegacySpaceAPICommand(command, stringifyLegacyParameters(arguments_));
+      return await runLegacySpaceAPICommand(
+        command,
+        stringifyLegacyParameters(arguments_),
+        structuredAPINamespace ?? "preferred",
+      );
     }
     throw new SpaceAPIProtocolError(
       `DesktopRenamer does not support SpaceAPI method '${command}'.`,
@@ -130,24 +137,45 @@ async function runSpaceAPIMethod(
 
   // Once getAPIInfo has succeeded, the structured server is authoritative. Do
   // not retry a request through another transport after an ambiguous response.
-  return await runStructuredSpaceAPICommand(command, arguments_ as SpaceAPIMethodArguments[typeof command]);
+  return await runStructuredSpaceAPICommand(
+    command,
+    arguments_ as SpaceAPIMethodArguments[typeof command],
+    structuredAPINamespace ?? "preferred",
+  );
 }
 
 async function getStructuredAPIInfo(): Promise<SpaceAPIInfo> {
   if (!structuredAPIInfoLookup) {
     structuredAPIMaxPayloadBytes = MAX_STRUCTURED_PAYLOAD_BYTES;
-    structuredAPIInfoLookup = runStructuredSpaceAPICommand("getAPIInfo", {})
-      .then((info) => {
-        structuredAPIMaxPayloadBytes = Math.min(MAX_STRUCTURED_PAYLOAD_BYTES, info.maxPayloadBytes);
-        return info;
-      })
-      .catch((error) => {
-        structuredAPIInfoLookup = null;
-        structuredAPIMaxPayloadBytes = MAX_STRUCTURED_PAYLOAD_BYTES;
-        throw error;
-      });
+    structuredAPIInfoLookup = requestStructuredAPIInfo().catch((error) => {
+      structuredAPIInfoLookup = null;
+      structuredAPIMaxPayloadBytes = MAX_STRUCTURED_PAYLOAD_BYTES;
+      structuredAPINamespace = null;
+      throw error;
+    });
   }
   return await structuredAPIInfoLookup;
+}
+
+async function requestStructuredAPIInfo(): Promise<SpaceAPIInfo> {
+  const namespaces: SpaceAPINamespace[] = structuredAPINamespace
+    ? [structuredAPINamespace, structuredAPINamespace === "preferred" ? "legacy" : "preferred"]
+    : ["preferred", "legacy"];
+  let lastError: unknown;
+
+  for (const namespace of namespaces) {
+    try {
+      const info = await runStructuredSpaceAPICommand("getAPIInfo", {}, namespace);
+      structuredAPINamespace = namespace;
+      structuredAPIMaxPayloadBytes = Math.min(MAX_STRUCTURED_PAYLOAD_BYTES, info.maxPayloadBytes);
+      return info;
+    } catch (error) {
+      lastError = error;
+      if (!(error instanceof SpaceAPIProtocolError && error.canFallback)) throw error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Unable to connect to DesktopRenamer SpaceAPI.");
 }
 
 export function stringifyLegacyParameters(arguments_: SpaceAPIParameters): Record<string, string> {
@@ -311,6 +339,7 @@ function makeStructuredRequestPayload(
 export async function runStructuredSpaceAPICommand<M extends SpaceAPIMethod>(
   command: M,
   arguments_: SpaceAPIMethodArguments[M] = {} as SpaceAPIMethodArguments[M],
+  namespace: SpaceAPINamespace = "preferred",
 ): Promise<SpaceAPIMethodResults[M]> {
   const requestID = randomUUID();
   const parameters = normalizeMethodArguments(command, arguments_);
@@ -323,7 +352,7 @@ export async function runStructuredSpaceAPICommand<M extends SpaceAPIMethod>(
       false,
     );
   }
-  const script = makeStructuredSpaceAPIJXA(requestID, requestPayload, requestTimeout(command));
+  const script = makeStructuredSpaceAPIJXA(requestID, requestPayload, requestTimeout(command), namespace);
 
   try {
     const { stdout, stderr } = await execFileAsync("/usr/bin/osascript", ["-l", "JavaScript", "-e", script], {
@@ -343,6 +372,7 @@ export async function runStructuredSpaceAPICommand<M extends SpaceAPIMethod>(
         // negotiation was cached. Force the next call to negotiate again.
         structuredAPIInfoLookup = null;
         structuredAPIMaxPayloadBytes = MAX_STRUCTURED_PAYLOAD_BYTES;
+        structuredAPINamespace = null;
       }
       throw error;
     }

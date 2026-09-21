@@ -10,6 +10,8 @@ export const OPERATION_REQUEST_TIMEOUT_MS = 10_000;
 export const PREFERRED_DESKTOP_RENAMER_API_PREFIX = "dev.mqiu.DesktopRenamer";
 export const LEGACY_DESKTOP_RENAMER_API_PREFIX = "com.michaelqiu.DesktopRenamer";
 
+export type SpaceAPINamespace = "preferred" | "legacy";
+
 export type SpaceAPIMethod =
   | "getAPIInfo"
   | "getAPIVersion"
