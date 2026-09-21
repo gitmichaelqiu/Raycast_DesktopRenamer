@@ -7,6 +7,8 @@ export const SUPPORTED_DESKTOP_RENAMER_API_MAJOR = 1;
 export const MAX_STRUCTURED_PAYLOAD_BYTES = 1_048_576;
 export const READ_REQUEST_TIMEOUT_MS = 3_000;
 export const OPERATION_REQUEST_TIMEOUT_MS = 10_000;
+export const PREFERRED_DESKTOP_RENAMER_API_PREFIX = "dev.mqiu.DesktopRenamer";
+export const LEGACY_DESKTOP_RENAMER_API_PREFIX = "com.michaelqiu.DesktopRenamer";
 
 export type SpaceAPIMethod =
   | "getAPIInfo"
@@ -184,9 +186,12 @@ export const STRUCTURED_READ_METHODS = new Set<SpaceAPIMethod>([
   "getWindows",
 ]);
 
-export const SPACE_API_RPC_REQUEST_NOTIFICATION = "com.michaelqiu.DesktopRenamer.RPCRequest";
-export const SPACE_API_RPC_RESPONSE_NOTIFICATION = "com.michaelqiu.DesktopRenamer.RPCResponse";
-export const SPACE_API_RPC_EVENT_NOTIFICATION = "com.michaelqiu.DesktopRenamer.RPCEvent";
+export const SPACE_API_RPC_REQUEST_NOTIFICATION = `${PREFERRED_DESKTOP_RENAMER_API_PREFIX}.RPCRequest`;
+export const SPACE_API_RPC_RESPONSE_NOTIFICATION = `${PREFERRED_DESKTOP_RENAMER_API_PREFIX}.RPCResponse`;
+export const SPACE_API_RPC_EVENT_NOTIFICATION = `${PREFERRED_DESKTOP_RENAMER_API_PREFIX}.RPCEvent`;
+export const LEGACY_SPACE_API_RPC_REQUEST_NOTIFICATION = `${LEGACY_DESKTOP_RENAMER_API_PREFIX}.RPCRequest`;
+export const LEGACY_SPACE_API_RPC_RESPONSE_NOTIFICATION = `${LEGACY_DESKTOP_RENAMER_API_PREFIX}.RPCResponse`;
+export const LEGACY_SPACE_API_RPC_EVENT_NOTIFICATION = `${LEGACY_DESKTOP_RENAMER_API_PREFIX}.RPCEvent`;
 export const SPACE_API_PAYLOAD_KEY = "payload";
 
 export interface SpaceAPISpaceRecord {

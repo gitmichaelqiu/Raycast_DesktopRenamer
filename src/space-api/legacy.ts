@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 import {
+  PREFERRED_DESKTOP_RENAMER_API_PREFIX,
   SPACE_API_ERROR_CODES,
   READ_REQUEST_TIMEOUT_MS,
   OPERATION_REQUEST_TIMEOUT_MS,
@@ -13,8 +14,8 @@ import {
 import { isReadSpaceAPIMethod, isRecord, protocolError } from "./codec";
 
 const execFileAsync = promisify(execFile);
-const SPACE_API_COMMAND_NOTIFICATION = "com.michaelqiu.DesktopRenamer.PerformCommand";
-const SPACE_API_RESULT_NOTIFICATION = "com.michaelqiu.DesktopRenamer.CommandResult";
+const SPACE_API_COMMAND_NOTIFICATION = `${PREFERRED_DESKTOP_RENAMER_API_PREFIX}.PerformCommand`;
+const SPACE_API_RESULT_NOTIFICATION = `${PREFERRED_DESKTOP_RENAMER_API_PREFIX}.CommandResult`;
 
 export function parseLegacySpaceSnapshotResult(raw: string): SpaceAPISnapshot {
   const trimmed = raw.trim();
