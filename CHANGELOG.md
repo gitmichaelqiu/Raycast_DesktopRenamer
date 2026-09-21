@@ -1,6 +1,14 @@
 # DesktopRenamer Changelog
 
-## [Window Actions] - {PR_MERGE_DATE}
+## [Desktop Controls and Window Actions] - {PR_MERGE_DATE}
+
+- Added desktop locking, restoring moved windows, and desktop reordering actions to `Switch Desktop`
+- Added keyboard shortcuts and pending-restore counts for desktop actions
+- Improved window moves, window actions, and batch operations across spaces and displays
+- Improved desktop grouping, current-desktop indicators, and app icons in window pickers
+- Migrated communication to the structured SpaceAPI while retaining compatibility with older installations
+
+## [Window Actions] - {2026-08-03}
 
 - Added window actions to `Batch Move Windows` and `List Windows` commands
 - Added displaying app icon for full screen desktops
