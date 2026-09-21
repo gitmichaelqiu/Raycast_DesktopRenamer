@@ -121,6 +121,7 @@ export default function Command() {
                 <Action
                   title={`Restore Moved Windows (${movedWindowsCount})`}
                   icon={Icon.ArrowClockwise}
+                  shortcut={{ modifiers: ["cmd"], key: "z" }}
                   onAction={restoreLockedWindows}
                 />
               </ActionPanel.Section>
