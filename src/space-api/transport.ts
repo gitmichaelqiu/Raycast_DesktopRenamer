@@ -11,6 +11,7 @@ import {
   SPACE_API_METHOD_DEFINITIONS,
   SPACE_API_WINDOW_ACTIONS,
   STRUCTURED_READ_METHODS,
+  UNIX_SOCKET_TRANSPORT_API_VERSION,
   SpaceAPIProtocolError,
   type SpaceAPIInfo,
   type SpaceAPINamespace,
@@ -42,6 +43,7 @@ import {
 } from "./legacy";
 import { makeAppleScriptForMethod } from "./script";
 import { makeStructuredSpaceAPIJXA } from "./jxa";
+import { getDesktopRenamerSocketPath, requestSpaceAPISocket, SpaceAPISocketUnavailable } from "./socket";
 import {
   communicationMethod,
   checkDesktopRenamerRunning,
@@ -53,6 +55,7 @@ const execFileAsync = promisify(execFile);
 let structuredAPIInfoLookup: Promise<SpaceAPIInfo> | null = null;
 let structuredAPIMaxPayloadBytes = MAX_STRUCTURED_PAYLOAD_BYTES;
 let structuredAPINamespace: SpaceAPINamespace | null = null;
+let structuredAPITransport: "unixDomainSocket" | "distributedNotificationCenter" | null = null;
 
 export interface DesktopRenamerRequestOptions {
   showErrorToast?: boolean;
@@ -78,7 +81,11 @@ export async function runDesktopRenamerScript(
         const apiResult = await runSpaceAPIForScript(scriptContent);
         if (apiResult !== null) return apiResult;
       } catch (error) {
-        if (method === "spaceapi" || !(error instanceof SpaceAPIProtocolError && error.canFallback)) {
+        if (
+          method === "spaceapi" ||
+          structuredAPITransport === "unixDomainSocket" ||
+          !(error instanceof SpaceAPIProtocolError && error.canFallback)
+        ) {
           throw error;
         }
       }
@@ -92,10 +99,12 @@ export async function runDesktopRenamerScript(
 
 export async function runSpaceAPIForScript(scriptContent: string): Promise<string | null> {
   if (scriptContent.includes("get windows")) {
-    return await runLegacySpaceAPICommandWithCompatibility("getWindows", {});
+    const result = await runDesktopRenamerMethod("getWindows", {}, undefined, { showErrorToast: false });
+    return JSON.stringify(result);
   }
   if (scriptContent.includes("get all spaces") && scriptContent.includes("get current space name")) {
-    return await runLegacySpaceAPICommandWithCompatibility("getSpaceSnapshot", {});
+    const result = await runDesktopRenamerMethod("getSpaceSnapshot", {}, undefined, { showErrorToast: false });
+    return JSON.stringify(result);
   }
   return null;
 }
@@ -120,7 +129,7 @@ async function runSpaceAPIMethod(
   if (command === "getAPIInfo") return info;
 
   if (!info.supportedMethods.includes(command)) {
-    if (fallbackToLegacy && info.legacyNotifications) {
+    if (fallbackToLegacy && structuredAPITransport === "distributedNotificationCenter" && info.legacyNotifications) {
       return await runLegacySpaceAPICommand(
         command,
         stringifyLegacyParameters(arguments_),
@@ -151,6 +160,7 @@ async function getStructuredAPIInfo(): Promise<SpaceAPIInfo> {
       structuredAPIInfoLookup = null;
       structuredAPIMaxPayloadBytes = MAX_STRUCTURED_PAYLOAD_BYTES;
       structuredAPINamespace = null;
+      structuredAPITransport = null;
       throw error;
     });
   }
@@ -158,24 +168,106 @@ async function getStructuredAPIInfo(): Promise<SpaceAPIInfo> {
 }
 
 async function requestStructuredAPIInfo(): Promise<SpaceAPIInfo> {
+  const requestID = randomUUID();
+  const requestPayload = makeStructuredRequestPayload(requestID, "getAPIInfo", {});
+  try {
+    const response = await requestSpaceAPISocket(requestPayload, requestID, READ_REQUEST_TIMEOUT_MS);
+    const info = validateStructuredResult("getAPIInfo", response.result) as SpaceAPIInfo;
+    if (!info.transports?.includes("unixDomainSocket") || info.socketEndpoint !== getDesktopRenamerSocketPath()) {
+      throw protocolError(
+        "DesktopRenamer did not confirm the authenticated socket transport.",
+        SPACE_API_ERROR_CODES.unsupportedContract,
+        undefined,
+        false,
+      );
+    }
+    structuredAPITransport = "unixDomainSocket";
+    structuredAPINamespace = "preferred";
+    structuredAPIMaxPayloadBytes = Math.min(MAX_STRUCTURED_PAYLOAD_BYTES, info.maxPayloadBytes);
+    return info;
+  } catch (error) {
+    if (!(error instanceof SpaceAPISocketUnavailable)) throw error;
+  }
+
   const namespaces: SpaceAPINamespace[] = structuredAPINamespace
     ? [structuredAPINamespace, structuredAPINamespace === "preferred" ? "legacy" : "preferred"]
     : ["preferred", "legacy"];
-  let lastError: unknown;
-
   for (const namespace of namespaces) {
     try {
-      const info = await runStructuredSpaceAPICommand("getAPIInfo", {}, namespace);
-      structuredAPINamespace = namespace;
-      structuredAPIMaxPayloadBytes = Math.min(MAX_STRUCTURED_PAYLOAD_BYTES, info.maxPayloadBytes);
-      return info;
+      const info = await runDistributedNotificationSpaceAPICommand("getAPIInfo", {}, namespace);
+      if (
+        compareContractVersions(info.contractVersion, UNIX_SOCKET_TRANSPORT_API_VERSION) < 0 &&
+        !info.transports?.includes("unixDomainSocket")
+      ) {
+        structuredAPITransport = "distributedNotificationCenter";
+        structuredAPINamespace = namespace;
+        structuredAPIMaxPayloadBytes = Math.min(MAX_STRUCTURED_PAYLOAD_BYTES, info.maxPayloadBytes);
+        return info;
+      }
+      throw protocolError(
+        "This DesktopRenamer version supports authenticated sockets, but its socket is unavailable.",
+        SPACE_API_ERROR_CODES.appUnavailable,
+        undefined,
+        false,
+      );
     } catch (error) {
-      lastError = error;
-      if (!(error instanceof SpaceAPIProtocolError && error.canFallback)) throw error;
+      if (error instanceof SpaceAPIProtocolError && !error.canFallback) throw error;
     }
   }
 
-  throw lastError instanceof Error ? lastError : new Error("Unable to connect to DesktopRenamer SpaceAPI.");
+  // Pre-1.0 clients have only the legacy version command. Accept that route
+  // only after the app itself confirms a contract older than socket support.
+  for (const namespace of namespaces) {
+    try {
+      const legacyVersion = await runLegacySpaceAPICommand("getAPIVersion", {}, namespace);
+      if (compareContractVersions(legacyVersion, UNIX_SOCKET_TRANSPORT_API_VERSION) < 0) {
+        structuredAPITransport = "distributedNotificationCenter";
+        structuredAPINamespace = namespace;
+        structuredAPIMaxPayloadBytes = MAX_STRUCTURED_PAYLOAD_BYTES;
+        return {
+          contractVersion: legacyVersion,
+          jsonRPCVersion: DESKTOP_RENAMER_JSON_RPC_VERSION,
+          supportedMethods: [],
+          legacyNotifications: true,
+          legacyCompatibility: "supported",
+          eventNotifications: false,
+          eventCapabilities: [],
+          maxPayloadBytes: MAX_STRUCTURED_PAYLOAD_BYTES,
+          transports: ["distributedNotificationCenter"],
+          socketEndpoint: null,
+          accessRestricted: false,
+        };
+      }
+    } catch {
+      // A missing version response is not evidence that the app is old.
+    }
+  }
+
+  structuredAPITransport = null;
+  structuredAPINamespace = null;
+  throw protocolError(
+    "Could not verify an older DesktopRenamer version before using the compatibility transport.",
+    SPACE_API_ERROR_CODES.appUnavailable,
+    undefined,
+    false,
+  );
+}
+
+function compareContractVersions(left: string, right: string): number {
+  const leftParts = left.split(".").map(Number);
+  const rightParts = right.split(".").map(Number);
+  if (
+    leftParts.length !== 3 ||
+    rightParts.length !== 3 ||
+    [...leftParts, ...rightParts].some((part) => !Number.isSafeInteger(part))
+  ) {
+    return Number.NaN;
+  }
+  for (let index = 0; index < 3; index += 1) {
+    const difference = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
 }
 
 export function stringifyLegacyParameters(arguments_: SpaceAPIParameters): Record<string, string> {
@@ -341,6 +433,55 @@ export async function runStructuredSpaceAPICommand<M extends SpaceAPIMethod>(
   arguments_: SpaceAPIMethodArguments[M] = {} as SpaceAPIMethodArguments[M],
   namespace: SpaceAPINamespace = "preferred",
 ): Promise<SpaceAPIMethodResults[M]> {
+  if (!structuredAPITransport) await getStructuredAPIInfo();
+  if (structuredAPITransport === "unixDomainSocket") {
+    const requestID = randomUUID();
+    const parameters = normalizeMethodArguments(command, arguments_);
+    const requestPayload = makeStructuredRequestPayload(requestID, command, parameters);
+    if (Buffer.byteLength(requestPayload, "utf8") > structuredAPIMaxPayloadBytes) {
+      throw protocolError(
+        "Structured SpaceAPI request exceeds the maximum size.",
+        SPACE_API_ERROR_CODES.payloadTooLarge,
+        undefined,
+        false,
+      );
+    }
+    try {
+      const response = await requestSpaceAPISocket(
+        requestPayload,
+        requestID,
+        requestTimeout(command),
+        structuredAPIMaxPayloadBytes,
+      );
+      return validateStructuredResult(command, response.result) as SpaceAPIMethodResults[M];
+    } catch (error) {
+      if (error instanceof SpaceAPIProtocolError) {
+        throw new SpaceAPIProtocolError(error.message, error.code, error.data, false);
+      }
+      throw protocolError(
+        error instanceof Error ? error.message : "SpaceAPI socket request failed.",
+        undefined,
+        undefined,
+        false,
+      );
+    }
+  }
+  if (structuredAPITransport === "distributedNotificationCenter") {
+    return await runDistributedNotificationSpaceAPICommand(command, arguments_, namespace);
+  }
+  throw protocolError(
+    "SpaceAPI transport has not been negotiated.",
+    SPACE_API_ERROR_CODES.appUnavailable,
+    undefined,
+    false,
+  );
+}
+
+async function runDistributedNotificationSpaceAPICommand<M extends SpaceAPIMethod>(
+  command: M,
+  arguments_: SpaceAPIMethodArguments[M] = {} as SpaceAPIMethodArguments[M],
+  namespace: SpaceAPINamespace = "preferred",
+): Promise<SpaceAPIMethodResults[M]> {
   const requestID = randomUUID();
   const parameters = normalizeMethodArguments(command, arguments_);
   const requestPayload = makeStructuredRequestPayload(requestID, command, parameters);
@@ -434,6 +575,7 @@ export async function runDesktopRenamerMethod<M extends SpaceAPIMethod>(
     // the same operation is never executed twice.
     if (
       method === "automatic" &&
+      structuredAPITransport === "distributedNotificationCenter" &&
       error instanceof SpaceAPIProtocolError &&
       error.canFallback &&
       (isReadSpaceAPIMethod(command) || error.code === SPACE_API_ERROR_CODES.apiDisabled)

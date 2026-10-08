@@ -2,6 +2,7 @@
 
 export const MINIMUM_DESKTOP_RENAMER_API_VERSION = "1.0.0";
 export const STRUCTURED_DESKTOP_RENAMER_API_VERSION = MINIMUM_DESKTOP_RENAMER_API_VERSION;
+export const UNIX_SOCKET_TRANSPORT_API_VERSION = "1.3.0";
 export const DESKTOP_RENAMER_JSON_RPC_VERSION = "2.0";
 export const SUPPORTED_DESKTOP_RENAMER_API_MAJOR = 1;
 export const MAX_STRUCTURED_PAYLOAD_BYTES = 1_048_576;
@@ -121,6 +122,7 @@ export const SPACE_API_ERROR_CODES = {
   internalError: -32603,
   apiDisabled: -32001,
   appUnavailable: -32002,
+  permissionDenied: -32003,
   operationFailed: -32004,
   unsupportedContract: -32005,
   payloadTooLarge: -32006,
@@ -269,6 +271,10 @@ export interface SpaceAPIInfo {
   eventNotifications: boolean;
   eventCapabilities: string[];
   maxPayloadBytes: number;
+  /** Missing on older app versions that predate transport discovery. */
+  transports?: string[];
+  socketEndpoint?: string | null;
+  accessRestricted?: boolean;
 }
 
 export interface SpaceAPIOperationResult {
