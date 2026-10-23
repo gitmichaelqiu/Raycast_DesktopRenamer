@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 import { runAppleScript } from "@raycast/utils";
 import {
+  ACCESS_APPROVAL_REQUEST_TIMEOUT_MS,
   DESKTOP_RENAMER_JSON_RPC_VERSION,
   MAX_STRUCTURED_PAYLOAD_BYTES,
   OPERATION_REQUEST_TIMEOUT_MS,
@@ -171,7 +172,7 @@ async function requestStructuredAPIInfo(): Promise<SpaceAPIInfo> {
   const requestID = randomUUID();
   const requestPayload = makeStructuredRequestPayload(requestID, "getAPIInfo", {});
   try {
-    const response = await requestSpaceAPISocket(requestPayload, requestID, READ_REQUEST_TIMEOUT_MS);
+    const response = await requestSpaceAPISocket(requestPayload, requestID, ACCESS_APPROVAL_REQUEST_TIMEOUT_MS);
     const info = validateStructuredResult("getAPIInfo", response.result) as SpaceAPIInfo;
     if (!info.transports?.includes("unixDomainSocket") || info.socketEndpoint !== getDesktopRenamerSocketPath()) {
       throw protocolError(
