@@ -276,6 +276,10 @@ export function parseAPIInfo(value: unknown): SpaceAPIInfo {
     transports,
     socketEndpoint,
     accessRestricted,
+    returnToOriginalSpace:
+      record.returnToOriginalSpace === undefined
+        ? true
+        : requiredBoolean(record.returnToOriginalSpace, "returnToOriginalSpace"),
   };
 }
 

@@ -3,6 +3,7 @@
 export const MINIMUM_DESKTOP_RENAMER_API_VERSION = "1.0.0";
 export const STRUCTURED_DESKTOP_RENAMER_API_VERSION = MINIMUM_DESKTOP_RENAMER_API_VERSION;
 export const UNIX_SOCKET_TRANSPORT_API_VERSION = "1.3.0";
+export const AUTOMATIC_RETURN_API_VERSION = "1.4.0";
 export const DESKTOP_RENAMER_JSON_RPC_VERSION = "2.0";
 export const SUPPORTED_DESKTOP_RENAMER_API_MAJOR = 1;
 export const MAX_STRUCTURED_PAYLOAD_BYTES = 1_048_576;
@@ -104,7 +105,12 @@ export interface SpaceAPIMethodArguments {
   toggleDesktopVisibility: EmptySpaceAPIParameters;
   getWindows: EmptySpaceAPIParameters;
   focusWindow: { windowID: number; pid: number };
-  executeWindowAction: { windowID: number; pid: number; action: SpaceAPIWindowAction };
+  executeWindowAction: {
+    windowID: number;
+    pid: number;
+    action: SpaceAPIWindowAction;
+    deferAutomaticReturn?: boolean;
+  };
   moveSpecificWindow: {
     windowID: number;
     pid?: number;
@@ -112,6 +118,7 @@ export interface SpaceAPIMethodArguments {
     targetSpaceID: string;
     isMinimized?: boolean;
     isHidden?: boolean;
+    deferAutomaticReturn?: boolean;
   };
 }
 
@@ -165,7 +172,12 @@ export const SPACE_API_METHOD_DEFINITIONS: Record<SpaceAPIMethod, SpaceAPIMethod
     required: ["windowID", "pid"],
   },
   executeWindowAction: {
-    parameters: { windowID: "positiveInteger", pid: "positiveInteger", action: "windowAction" },
+    parameters: {
+      windowID: "positiveInteger",
+      pid: "positiveInteger",
+      action: "windowAction",
+      deferAutomaticReturn: "boolean",
+    },
     required: ["windowID", "pid", "action"],
   },
   moveSpecificWindow: {
@@ -176,6 +188,7 @@ export const SPACE_API_METHOD_DEFINITIONS: Record<SpaceAPIMethod, SpaceAPIMethod
       targetSpaceID: "string",
       isMinimized: "boolean",
       isHidden: "boolean",
+      deferAutomaticReturn: "boolean",
     },
     required: ["windowID", "fromSpaceID", "targetSpaceID"],
   },
@@ -272,6 +285,7 @@ export interface SpaceAPIInfo {
   eventNotifications: boolean;
   eventCapabilities: string[];
   maxPayloadBytes: number;
+  returnToOriginalSpace: boolean;
   /** Missing on older app versions that predate transport discovery. */
   transports?: string[];
   socketEndpoint?: string | null;

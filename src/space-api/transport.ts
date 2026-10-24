@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 import { runAppleScript } from "@raycast/utils";
 import {
+  AUTOMATIC_RETURN_API_VERSION,
   ACCESS_APPROVAL_REQUEST_TIMEOUT_MS,
   DESKTOP_RENAMER_JSON_RPC_VERSION,
   MAX_STRUCTURED_PAYLOAD_BYTES,
@@ -60,6 +61,7 @@ let structuredAPITransport: "unixDomainSocket" | "distributedNotificationCenter"
 
 export interface DesktopRenamerRequestOptions {
   showErrorToast?: boolean;
+  deferAutomaticReturn?: boolean;
 }
 
 export async function runDesktopRenamerScript(
@@ -168,6 +170,14 @@ async function getStructuredAPIInfo(): Promise<SpaceAPIInfo> {
   return await structuredAPIInfoLookup;
 }
 
+export async function refreshStructuredAPIInfo(): Promise<SpaceAPIInfo> {
+  // The negotiated API information is cached for transport discovery, but
+  // app-owned settings can change while Raycast remains open.
+  if (!structuredAPIInfoLookup) return await getStructuredAPIInfo();
+  await structuredAPIInfoLookup;
+  return await requestStructuredAPIInfo();
+}
+
 async function requestStructuredAPIInfo(): Promise<SpaceAPIInfo> {
   const requestID = randomUUID();
   const requestPayload = makeStructuredRequestPayload(requestID, "getAPIInfo", {});
@@ -237,6 +247,7 @@ async function requestStructuredAPIInfo(): Promise<SpaceAPIInfo> {
           transports: ["distributedNotificationCenter"],
           socketEndpoint: null,
           accessRestricted: false,
+          returnToOriginalSpace: true,
         };
       }
     } catch {
@@ -434,10 +445,16 @@ export async function runStructuredSpaceAPICommand<M extends SpaceAPIMethod>(
   arguments_: SpaceAPIMethodArguments[M] = {} as SpaceAPIMethodArguments[M],
   namespace: SpaceAPINamespace = "preferred",
 ): Promise<SpaceAPIMethodResults[M]> {
-  if (!structuredAPITransport) await getStructuredAPIInfo();
+  const info = await getStructuredAPIInfo();
+  let effectiveArguments = arguments_ as unknown as SpaceAPIParameters;
+  if (compareContractVersions(info.contractVersion, AUTOMATIC_RETURN_API_VERSION) < 0) {
+    const { deferAutomaticReturn: _, ...compatibleArguments } = effectiveArguments;
+    effectiveArguments = compatibleArguments;
+  }
+
   if (structuredAPITransport === "unixDomainSocket") {
     const requestID = randomUUID();
-    const parameters = normalizeMethodArguments(command, arguments_);
+    const parameters = normalizeMethodArguments(command, effectiveArguments);
     const requestPayload = makeStructuredRequestPayload(requestID, command, parameters);
     if (Buffer.byteLength(requestPayload, "utf8") > structuredAPIMaxPayloadBytes) {
       throw protocolError(
@@ -468,7 +485,11 @@ export async function runStructuredSpaceAPICommand<M extends SpaceAPIMethod>(
     }
   }
   if (structuredAPITransport === "distributedNotificationCenter") {
-    return await runDistributedNotificationSpaceAPICommand(command, arguments_, namespace);
+    return await runDistributedNotificationSpaceAPICommand(
+      command,
+      effectiveArguments as SpaceAPIMethodArguments[M],
+      namespace
+    );
   }
   throw protocolError(
     "SpaceAPI transport has not been negotiated.",
@@ -548,7 +569,7 @@ export async function runDesktopRenamerMethod<M extends SpaceAPIMethod>(
   // Always use the correlated JSON-RPC form for this handshake.
   if (command === "getAPIInfo") {
     try {
-      return (await getStructuredAPIInfo()) as SpaceAPIMethodResults[M];
+      return (await refreshStructuredAPIInfo()) as SpaceAPIMethodResults[M];
     } catch (error) {
       if (options.showErrorToast !== false) await handleDesktopRenamerError(error, errorMessage);
       throw error;

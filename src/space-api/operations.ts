@@ -8,7 +8,11 @@ import {
   type SpaceAPIWindowSpaceRecord,
   type SpaceAPIWindowsSnapshot,
 } from "./contract";
-import { runDesktopRenamerMethod, type DesktopRenamerRequestOptions } from "./transport";
+import {
+  refreshStructuredAPIInfo,
+  runDesktopRenamerMethod,
+  type DesktopRenamerRequestOptions,
+} from "./transport";
 
 export interface CurrentSpaceSnapshot {
   spacesByDisplay: Record<string, string>;
@@ -73,6 +77,15 @@ export async function getSpaceSnapshot(errorMessage = "Failed to read spaces"): 
 
 export async function getAPIInfo(errorMessage = "Failed to read API information"): Promise<SpaceAPIInfo> {
   return await runDesktopRenamerMethod("getAPIInfo", {}, errorMessage);
+}
+
+export async function getAutomaticReturnPreference(): Promise<boolean> {
+  try {
+    return (await refreshStructuredAPIInfo()).returnToOriginalSpace;
+  } catch {
+    // Older or unavailable APIs retain Raycast's previous default behavior.
+    return true;
+  }
 }
 
 export async function getWindowsSnapshot(errorMessage = "Failed to read windows"): Promise<SpaceAPIWindowsSnapshot> {
@@ -226,7 +239,17 @@ export async function executeWindowAction(
   errorMessage = "Failed to execute window action",
   options: DesktopRenamerRequestOptions = {},
 ): Promise<SpaceAPIOperationResult> {
-  return await runDesktopRenamerMethod("executeWindowAction", { windowID, pid, action }, errorMessage, options);
+  return await runDesktopRenamerMethod(
+    "executeWindowAction",
+    {
+      windowID,
+      pid,
+      action,
+      ...(options.deferAutomaticReturn ? { deferAutomaticReturn: true } : {}),
+    },
+    errorMessage,
+    options,
+  );
 }
 
 export async function moveSpecificWindow(
@@ -237,6 +260,7 @@ export async function moveSpecificWindow(
     targetSpaceID: string;
     isMinimized?: boolean;
     isHidden?: boolean;
+    deferAutomaticReturn?: boolean;
   },
   errorMessage = "Failed to move window",
 ): Promise<SpaceAPIOperationResult> {
@@ -250,6 +274,7 @@ export async function moveSpecificWindowToSpace(args: {
   targetSpaceID: string;
   isMinimized?: boolean;
   isHidden?: boolean;
+  deferAutomaticReturn?: boolean;
 }): Promise<SpaceAPIOperationResult> {
   return await moveSpecificWindow(args);
 }
