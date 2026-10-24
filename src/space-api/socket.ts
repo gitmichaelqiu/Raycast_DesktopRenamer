@@ -117,14 +117,6 @@ export async function requestSpaceAPISocket(
         for (const frame of decoded.frames) {
           const text = frame.toString("utf8");
           const value = JSON.parse(text) as unknown;
-          if (isPermissionDenied(value)) {
-            throw new SpaceAPIProtocolError(
-              "This app is not approved to use SpaceAPI.",
-              SPACE_API_ERROR_CODES.permissionDenied,
-              undefined,
-              false,
-            );
-          }
           if (isJSONRPCEvent(value)) {
             decodeStructuredRPCEvent(text, maximumPayloadBytes);
             continue;
@@ -158,18 +150,6 @@ export function getDesktopRenamerSocketPath(): string {
 
 function isJSONRPCEvent(value: unknown): value is { method: string } {
   return typeof value === "object" && value !== null && !Array.isArray(value) && "method" in value && !("id" in value);
-}
-
-function isPermissionDenied(value: unknown): boolean {
-  if (typeof value !== "object" || value === null || Array.isArray(value) || !("error" in value)) return false;
-  const error = value.error;
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    !Array.isArray(error) &&
-    "code" in error &&
-    error.code === SPACE_API_ERROR_CODES.permissionDenied
-  );
 }
 
 function asNonFallbackError(error: unknown): Error {
