@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 import { runAppleScript } from "@raycast/utils";
 import {
-  AUTOMATIC_RETURN_API_VERSION,
   ACCESS_APPROVAL_REQUEST_TIMEOUT_MS,
   DESKTOP_RENAMER_JSON_RPC_VERSION,
   MAX_STRUCTURED_PAYLOAD_BYTES,
@@ -247,7 +246,6 @@ async function requestStructuredAPIInfo(): Promise<SpaceAPIInfo> {
           transports: ["distributedNotificationCenter"],
           socketEndpoint: null,
           accessRestricted: false,
-          returnToOriginalSpace: true,
         };
       }
     } catch {
@@ -447,7 +445,7 @@ export async function runStructuredSpaceAPICommand<M extends SpaceAPIMethod>(
 ): Promise<SpaceAPIMethodResults[M]> {
   const info = await getStructuredAPIInfo();
   let effectiveArguments = arguments_ as unknown as SpaceAPIParameters;
-  if (compareContractVersions(info.contractVersion, AUTOMATIC_RETURN_API_VERSION) < 0) {
+  if (info.returnToOriginalSpace === undefined) {
     const { deferAutomaticReturn: _, ...compatibleArguments } = effectiveArguments;
     effectiveArguments = compatibleArguments;
   }

@@ -3,7 +3,6 @@
 export const MINIMUM_DESKTOP_RENAMER_API_VERSION = "1.0.0";
 export const STRUCTURED_DESKTOP_RENAMER_API_VERSION = MINIMUM_DESKTOP_RENAMER_API_VERSION;
 export const UNIX_SOCKET_TRANSPORT_API_VERSION = "1.3.0";
-export const AUTOMATIC_RETURN_API_VERSION = "1.4.0";
 export const DESKTOP_RENAMER_JSON_RPC_VERSION = "2.0";
 export const SUPPORTED_DESKTOP_RENAMER_API_MAJOR = 1;
 export const MAX_STRUCTURED_PAYLOAD_BYTES = 1_048_576;
@@ -285,7 +284,8 @@ export interface SpaceAPIInfo {
   eventNotifications: boolean;
   eventCapabilities: string[];
   maxPayloadBytes: number;
-  returnToOriginalSpace: boolean;
+  /** Omitted by 1.3.0 builds predating centralized automatic return. */
+  returnToOriginalSpace?: boolean;
   /** Missing on older app versions that predate transport discovery. */
   transports?: string[];
   socketEndpoint?: string | null;

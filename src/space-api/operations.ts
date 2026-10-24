@@ -81,7 +81,7 @@ export async function getAPIInfo(errorMessage = "Failed to read API information"
 
 export async function getAutomaticReturnPreference(): Promise<boolean> {
   try {
-    return (await refreshStructuredAPIInfo()).returnToOriginalSpace;
+    return (await refreshStructuredAPIInfo()).returnToOriginalSpace ?? true;
   } catch {
     // Older or unavailable APIs retain Raycast's previous default behavior.
     return true;
