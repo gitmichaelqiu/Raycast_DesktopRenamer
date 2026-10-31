@@ -443,7 +443,8 @@ export async function runStructuredSpaceAPICommand<M extends SpaceAPIMethod>(
   const info = await getStructuredAPIInfo();
   let effectiveArguments = arguments_ as unknown as SpaceAPIParameters;
   if (info.returnToOriginalSpace === undefined) {
-    const { deferAutomaticReturn: _, ...compatibleArguments } = effectiveArguments;
+    const compatibleArguments = { ...effectiveArguments };
+    delete compatibleArguments.deferAutomaticReturn;
     effectiveArguments = compatibleArguments;
   }
 
@@ -483,7 +484,7 @@ export async function runStructuredSpaceAPICommand<M extends SpaceAPIMethod>(
     return await runDistributedNotificationSpaceAPICommand(
       command,
       effectiveArguments as SpaceAPIMethodArguments[M],
-      namespace
+      namespace,
     );
   }
   throw protocolError(

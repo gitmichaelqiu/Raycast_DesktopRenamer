@@ -8,11 +8,7 @@ import {
   type SpaceAPIWindowSpaceRecord,
   type SpaceAPIWindowsSnapshot,
 } from "./contract";
-import {
-  refreshStructuredAPIInfo,
-  runDesktopRenamerMethod,
-  type DesktopRenamerRequestOptions,
-} from "./transport";
+import { refreshStructuredAPIInfo, runDesktopRenamerMethod, type DesktopRenamerRequestOptions } from "./transport";
 
 export interface CurrentSpaceSnapshot {
   spacesByDisplay: Record<string, string>;

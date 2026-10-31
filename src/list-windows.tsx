@@ -158,8 +158,7 @@ export default function Command() {
   async function handleWindowAction(entry: WindowEntry, action: SpaceAPIWindowAction) {
     try {
       const shouldReturn = await getAutomaticReturnPreference();
-      const originalSpaces =
-        action === "quit" || !shouldReturn ? undefined : await getCurrentSpacesByDisplay();
+      const originalSpaces = action === "quit" || !shouldReturn ? undefined : await getCurrentSpacesByDisplay();
       const actionLabel = getWindowActionLabel(action);
       if (action === "quit") {
         setTerminatingPIDs((previous) => new Set(previous).add(entry.pid));
