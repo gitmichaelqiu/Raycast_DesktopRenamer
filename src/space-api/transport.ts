@@ -205,10 +205,7 @@ async function requestStructuredAPIInfo(): Promise<SpaceAPIInfo> {
   for (const namespace of namespaces) {
     try {
       const info = await runDistributedNotificationSpaceAPICommand("getAPIInfo", {}, namespace);
-      if (
-        compareContractVersions(info.contractVersion, UNIX_SOCKET_TRANSPORT_API_VERSION) < 0 &&
-        !info.transports?.includes("unixDomainSocket")
-      ) {
+      if (info.transports?.includes("distributedNotificationCenter") && info.accessRestricted === false) {
         structuredAPITransport = "distributedNotificationCenter";
         structuredAPINamespace = namespace;
         structuredAPIMaxPayloadBytes = Math.min(MAX_STRUCTURED_PAYLOAD_BYTES, info.maxPayloadBytes);
